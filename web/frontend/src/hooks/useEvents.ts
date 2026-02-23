@@ -7,6 +7,8 @@ export function useEvents(params?: {
   page_size?: number
   instance_id?: number
   label?: string
+  date_from?: string
+  date_to?: string
 }) {
   const [data, setData] = useState<PaginatedResponse<DetectionEvent>>({
     items: [], total: 0, page: 1, page_size: 50, pages: 0,

@@ -36,11 +36,11 @@ export function useWebSocket({ url, enabled = true, onMessage, reconnectInterval
         try {
           const data = JSON.parse(e.data)
           onMessageRef.current?.(data)
-        } catch {
+        } catch (_) {
           // ignore
         }
       }
-    } catch {
+    } catch (_) {
       if (enabled) {
         reconnectTimer.current = setTimeout(connect, reconnectInterval)
       }

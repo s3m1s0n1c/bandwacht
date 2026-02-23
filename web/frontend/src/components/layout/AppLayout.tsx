@@ -18,7 +18,7 @@ export default function AppLayout({ currentPage, onNavigate, children }: AppLayo
     try {
       await health()
       setBackendConnected(true)
-    } catch {
+    } catch (_) {
       setBackendConnected(false)
     }
   }, [])

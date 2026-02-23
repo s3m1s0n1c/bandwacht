@@ -33,7 +33,7 @@ export default function Dashboard() {
       try {
         const status = await instancesApi.status(inst.id)
         if (status.running) running.add(inst.id)
-      } catch { /* ignore */ }
+      } catch (_) { /* ignore */ }
     }
     setRunningIds(running)
     if (data.length > 0 && selectedId === null) {

@@ -12,7 +12,7 @@ export default function StatsPanel() {
     try {
       const data = await api.stats()
       setStats(data)
-    } catch { /* ignore */ }
+    } catch (_) { /* ignore */ }
   }, [])
 
   useEffect(() => { load() }, [load])

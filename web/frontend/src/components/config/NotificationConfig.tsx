@@ -50,7 +50,7 @@ export default function NotificationConfig() {
     setTesting(id)
     try {
       await api.test(id)
-    } catch {
+    } catch (_) {
       // ignore
     } finally {
       setTesting(null)
