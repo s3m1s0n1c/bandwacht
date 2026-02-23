@@ -23,6 +23,7 @@ class SdrInstance(Base):
     center_freq: Mapped[float | None] = mapped_column(Float, nullable=True)
     bandwidth: Mapped[float | None] = mapped_column(Float, nullable=True)
     fft_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    desired_profile: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 

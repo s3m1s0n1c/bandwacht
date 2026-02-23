@@ -7,8 +7,14 @@ export interface SdrInstance {
   center_freq: number | null
   bandwidth: number | null
   fft_size: number | null
+  desired_profile: string | null
   created_at: string
   updated_at: string
+}
+
+export interface AvailableProfile {
+  id: string
+  name: string
 }
 
 export interface WatchTarget {

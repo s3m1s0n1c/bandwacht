@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Optional
 
+import websockets
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # Add bandwacht root to path
@@ -217,6 +218,7 @@ class MonitorManager:
             cooldown_s=settings.cooldown_s,
             notifiers=notifiers,
             record=settings.record_enabled,
+            desired_profile=inst.desired_profile,
             on_fft_callback=on_fft,
             on_connected_callback=on_connected,
         )
@@ -349,6 +351,50 @@ class MonitorManager:
         except (KeyError, TypeError) as e:
             logger.warning(f"Cannot build {backend} notifier: {e}")
         return None
+
+    def get_monitor(self, instance_id: int) -> Optional[WebBandWacht]:
+        return self._instances.get(instance_id)
+
+
+async def fetch_profiles_from_url(url: str, timeout: float = 5.0) -> list[dict]:
+    """Connect to an OpenWebRX instance and fetch its available profiles."""
+    base_url = url.rstrip("/")
+    if base_url.startswith("https://"):
+        ws_url = base_url.replace("https://", "wss://") + "/ws/"
+    elif base_url.startswith("http://"):
+        ws_url = base_url.replace("http://", "ws://") + "/ws/"
+    elif base_url.startswith("ws://") or base_url.startswith("wss://"):
+        ws_url = base_url + "/ws/"
+    else:
+        ws_url = "ws://" + base_url + "/ws/"
+
+    try:
+        async with websockets.connect(
+            ws_url,
+            ping_interval=None,
+            max_size=2**20,
+            additional_headers={"User-Agent": "BandWacht/1.0 (FunkPilot/OE8YML)"},
+        ) as ws:
+            await ws.send("SERVER DE CLIENT client=bandwacht type=receiver")
+            deadline = asyncio.get_running_loop().time() + timeout
+            while asyncio.get_running_loop().time() < deadline:
+                try:
+                    msg = await asyncio.wait_for(
+                        ws.recv(),
+                        timeout=deadline - asyncio.get_running_loop().time(),
+                    )
+                except asyncio.TimeoutError:
+                    break
+                if isinstance(msg, str) and msg.startswith("{"):
+                    try:
+                        data = json.loads(msg)
+                        if data.get("type") == "profiles" and isinstance(data.get("value"), list):
+                            return data["value"]
+                    except json.JSONDecodeError:
+                        pass
+    except Exception as e:
+        logger.warning(f"Failed to fetch profiles from {url}: {e}")
+    return []
 
 
 # Singleton

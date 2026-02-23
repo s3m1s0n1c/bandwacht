@@ -12,6 +12,7 @@ class InstanceBase(BaseModel):
     name: str
     url: str
     enabled: bool = True
+    desired_profile: str | None = None
 
 class InstanceCreate(InstanceBase):
     pass
@@ -20,6 +21,7 @@ class InstanceUpdate(BaseModel):
     name: str | None = None
     url: str | None = None
     enabled: bool | None = None
+    desired_profile: str | None = None
 
 class InstanceRead(InstanceBase):
     model_config = ConfigDict(from_attributes=True)
@@ -30,6 +32,11 @@ class InstanceRead(InstanceBase):
     fft_size: int | None
     created_at: datetime
     updated_at: datetime
+
+
+class AvailableProfile(BaseModel):
+    id: str
+    name: str
 
 class InstanceStatus(BaseModel):
     id: int

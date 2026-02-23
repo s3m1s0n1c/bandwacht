@@ -36,8 +36,14 @@ export default function InstanceStatusCard({ instance, isRunning, onStart, onSto
       <p className="text-xs text-sdr-muted mb-2 truncate">{instance.url}</p>
 
       {instance.center_freq && instance.bandwidth && (
-        <p className="text-xs text-sdr-muted mb-3">
+        <p className={`text-xs text-sdr-muted ${instance.desired_profile ? 'mb-1' : 'mb-3'}`}>
           {formatFreqShort(instance.center_freq)} &middot; {formatFreqShort(instance.bandwidth)} BW
+        </p>
+      )}
+
+      {instance.desired_profile && (
+        <p className="text-xs text-sdr-cyan/70 mb-3">
+          Profil: {instance.desired_profile.split('|').pop()}
         </p>
       )}
 

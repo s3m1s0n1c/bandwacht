@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import crud
 from ..database import get_db
-from ..schemas import InstanceCreate, InstanceRead, InstanceUpdate
+from ..schemas import AvailableProfile, InstanceCreate, InstanceRead, InstanceUpdate
 
 router = APIRouter()
 
@@ -79,3 +79,21 @@ async def instance_status(instance_id: int, db: AsyncSession = Depends(get_db)):
         "bandwidth": inst.bandwidth,
         "fft_size": inst.fft_size,
     }
+
+
+@router.get("/instances/{instance_id}/profiles", response_model=list[AvailableProfile])
+async def get_profiles(instance_id: int, db: AsyncSession = Depends(get_db)):
+    inst = await crud.get_instance(db, instance_id)
+    if not inst:
+        raise HTTPException(404, "Instanz nicht gefunden")
+
+    from ..services.monitor_manager import fetch_profiles_from_url, manager
+
+    # If monitor is running, try to read cached profiles first
+    monitor = manager.get_monitor(instance_id)
+    if monitor and monitor.available_profiles:
+        return monitor.available_profiles
+
+    # Otherwise make a temporary WebSocket connection
+    profiles = await fetch_profiles_from_url(inst.url)
+    return profiles

@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { X } from 'lucide-react'
+import { X, RefreshCw } from 'lucide-react'
 import { instances as api } from '../../api/client'
 import { UI } from '../../utils/strings'
-import type { SdrInstance } from '../../types'
+import type { SdrInstance, AvailableProfile } from '../../types'
 
 interface InstanceFormProps {
   instance: SdrInstance | null
@@ -14,8 +14,24 @@ export default function InstanceForm({ instance, onClose, onSaved }: InstanceFor
   const [name, setName] = useState(instance?.name ?? '')
   const [url, setUrl] = useState(instance?.url ?? '')
   const [enabled, setEnabled] = useState(instance?.enabled ?? true)
+  const [desiredProfile, setDesiredProfile] = useState<string | null>(instance?.desired_profile ?? null)
+  const [profiles, setProfiles] = useState<AvailableProfile[]>([])
+  const [loadingProfiles, setLoadingProfiles] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const fetchProfiles = async () => {
+    if (!instance) return
+    setLoadingProfiles(true)
+    try {
+      const data = await api.profiles(instance.id)
+      setProfiles(data)
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setLoadingProfiles(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -23,9 +39,9 @@ export default function InstanceForm({ instance, onClose, onSaved }: InstanceFor
     setError(null)
     try {
       if (instance) {
-        await api.update(instance.id, { name, url, enabled })
+        await api.update(instance.id, { name, url, enabled, desired_profile: desiredProfile })
       } else {
-        await api.create({ name, url, enabled })
+        await api.create({ name, url, enabled, desired_profile: desiredProfile })
       }
       onSaved()
     } catch (err: any) {
@@ -58,6 +74,39 @@ export default function InstanceForm({ instance, onClose, onSaved }: InstanceFor
           <label className="label">{UI.cfg_url}</label>
           <input className="input w-full" value={url} onChange={e => setUrl(e.target.value)} placeholder="http://sdr-host:8073" required />
         </div>
+
+        {instance && (
+          <div>
+            <label className="label">{UI.cfg_profile}</label>
+            <div className="flex gap-2">
+              <select
+                className="input w-full"
+                value={desiredProfile ?? ''}
+                onChange={e => setDesiredProfile(e.target.value || null)}
+              >
+                <option value="">— kein Profil —</option>
+                {profiles.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+                {desiredProfile && !profiles.find(p => p.id === desiredProfile) && (
+                  <option value={desiredProfile}>{desiredProfile}</option>
+                )}
+              </select>
+              <button
+                type="button"
+                onClick={fetchProfiles}
+                disabled={loadingProfiles}
+                className="btn-ghost flex items-center gap-1 text-xs whitespace-nowrap"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingProfiles ? 'animate-spin' : ''}`} />
+                {UI.cfg_fetch_profiles}
+              </button>
+            </div>
+            {profiles.length === 0 && !loadingProfiles && (
+              <p className="text-xs text-sdr-muted mt-1">{UI.cfg_no_profiles}</p>
+            )}
+          </div>
+        )}
 
         <label className="flex items-center gap-2 text-sm cursor-pointer">
           <input type="checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)}

@@ -42,6 +42,9 @@ export const UI = {
   cfg_delete: 'Löschen',
   cfg_edit: 'Bearbeiten',
   cfg_test: 'Test senden',
+  cfg_profile: 'Profil',
+  cfg_fetch_profiles: 'Profile laden',
+  cfg_no_profiles: 'Keine Profile verfügbar',
 
   // History
   hist_title: 'Ereignis-Logbuch',

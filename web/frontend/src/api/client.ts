@@ -17,12 +17,12 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 export const instances = {
   list: () => request<import('../types').SdrInstance[]>('/instances'),
   get: (id: number) => request<import('../types').SdrInstance>(`/instances/${id}`),
-  create: (data: { name: string; url: string; enabled?: boolean }) =>
+  create: (data: { name: string; url: string; enabled?: boolean; desired_profile?: string | null }) =>
     request<import('../types').SdrInstance>('/instances', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  update: (id: number, data: Partial<{ name: string; url: string; enabled: boolean }>) =>
+  update: (id: number, data: Partial<{ name: string; url: string; enabled: boolean; desired_profile: string | null }>) =>
     request<import('../types').SdrInstance>(`/instances/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -31,6 +31,7 @@ export const instances = {
   start: (id: number) => request<{ ok: boolean }>(`/instances/${id}/start`, { method: 'POST' }),
   stop: (id: number) => request<{ ok: boolean }>(`/instances/${id}/stop`, { method: 'POST' }),
   status: (id: number) => request<any>(`/instances/${id}/status`),
+  profiles: (id: number) => request<import('../types').AvailableProfile[]>(`/instances/${id}/profiles`),
 }
 
 // --- Targets ---

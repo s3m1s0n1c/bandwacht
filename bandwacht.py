@@ -632,6 +632,7 @@ class BandWacht:
         recording_dir: str = "./recordings",
         log_csv: bool = False,
         csv_file: str = "./bandwacht_log.csv",
+        desired_profile: Optional[str] = None,
     ):
         # Normalize URL
         self.base_url = url.rstrip("/")
@@ -661,6 +662,12 @@ class BandWacht:
         self.hysteresis_db = hysteresis_db
         self.hold_time_s = hold_time_s
         self.cooldown_s = cooldown_s
+
+        # Profile switching
+        self.desired_profile = desired_profile
+        self.available_profiles: list[dict] = []
+        self._profile_set = False
+        self._ws: Optional[object] = None
 
         # Stats
         self.fft_count = 0
@@ -697,6 +704,9 @@ class BandWacht:
                     elif msg_type == "receiver_details" and isinstance(value, dict):
                         for key, val in value.items():
                             self._handle_config(key, str(val))
+                    elif msg_type == "profiles" and isinstance(value, list):
+                        self.available_profiles = value
+                        logger.info(f"Received {len(value)} profiles from server")
                     else:
                         # Flat JSON fallback
                         for key, val in data.items():
@@ -809,6 +819,7 @@ class BandWacht:
                         "User-Agent": "BandWacht/1.0 (FunkPilot/OE8YML)"
                     }
                 ) as ws:
+                    self._ws = ws
                     self.connected_since = time.time()
                     logger.info(f"✅ Connected to {self.base_url}")
                     retry_delay = 2  # Reset retry delay on successful connection
@@ -818,6 +829,18 @@ class BandWacht:
                         await ws.send("SERVER DE CLIENT client=bandwacht type=receiver")
                     except Exception:
                         pass
+
+                    # Switch to desired profile (once per connection, avoid bot detection)
+                    if self.desired_profile and not self._profile_set:
+                        try:
+                            await ws.send(json.dumps({
+                                "type": "selectprofile",
+                                "params": {"profile": self.desired_profile}
+                            }))
+                            self._profile_set = True
+                            logger.info(f"Switched to profile: {self.desired_profile}")
+                        except Exception as e:
+                            logger.warning(f"Failed to switch profile: {e}")
 
                     # Listen for messages
                     async for message in ws:
