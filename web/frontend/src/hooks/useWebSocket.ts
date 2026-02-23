@@ -10,7 +10,7 @@ interface UseWebSocketOptions {
 export function useWebSocket({ url, enabled = true, onMessage, reconnectInterval = 3000 }: UseWebSocketOptions) {
   const [connected, setConnected] = useState(false)
   const wsRef = useRef<WebSocket | null>(null)
-  const reconnectTimer = useRef<ReturnType<typeof setTimeout>>()
+  const reconnectTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const onMessageRef = useRef(onMessage)
   onMessageRef.current = onMessage
 
