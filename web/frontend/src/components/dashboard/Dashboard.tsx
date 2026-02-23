@@ -22,52 +22,71 @@ export default function Dashboard() {
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [fftData, setFftData] = useState<number[] | null>(null)
   const [liveEvents, setLiveEvents] = useState<LiveEvent[]>([])
-  const [runningIds, setRunningIds] = useState<Set<number>>(new Set())
+  const [runningIds, setRunningIds] = useState<number[]>([])
+  const selectedIdRef = useRef(selectedId)
+  selectedIdRef.current = selectedId
 
   const refreshInstances = useCallback(async () => {
     const data = await instancesApi.list()
     setInstances(data)
-    // Check which are running
-    const running = new Set<number>()
+    const running: number[] = []
     for (const inst of data) {
       try {
         const status = await instancesApi.status(inst.id)
-        if (status.running) running.add(inst.id)
+        if (status.running) running.push(inst.id)
       } catch (_) { /* ignore */ }
     }
     setRunningIds(running)
-    if (data.length > 0 && selectedId === null) {
+    if (data.length > 0 && selectedIdRef.current === null) {
       setSelectedId(data[0].id)
     }
-  }, [selectedId])
+  }, [])
 
   useEffect(() => { refreshInstances() }, [refreshInstances])
 
-  // Poll instance status
+  // Poll instance status every 3s
   useEffect(() => {
-    const interval = setInterval(refreshInstances, 5000)
+    const interval = setInterval(refreshInstances, 3000)
     return () => clearInterval(interval)
   }, [refreshInstances])
 
+  const isSelectedRunning = selectedId != null && runningIds.includes(selectedId)
+
   // FFT WebSocket
+  const fftUrl = selectedId ? `/ws/spectrum/${selectedId}` : '/ws/spectrum/0'
   useWebSocket({
-    url: selectedId ? `/ws/spectrum/${selectedId}` : '/ws/spectrum/0',
-    enabled: selectedId != null && runningIds.has(selectedId),
+    url: fftUrl,
+    enabled: isSelectedRunning,
     onMessage: useCallback((data: number[]) => setFftData(data), []),
   })
 
   // Events WebSocket
-  const eventsRef = useRef(liveEvents)
-  eventsRef.current = liveEvents
   useWebSocket({
     url: '/ws/events',
-    enabled: runningIds.size > 0,
+    enabled: runningIds.length > 0,
     onMessage: useCallback((data: LiveEvent) => {
       setLiveEvents(prev => [data, ...prev].slice(0, 50))
     }, []),
   })
 
   const selected = instances.find(i => i.id === selectedId)
+
+  const handleStartAndSelect = useCallback(async (id: number) => {
+    setSelectedId(id)
+    setFftData(null)
+    await instancesApi.start(id)
+    // Poll rapidly after start to pick up connection info
+    for (let i = 0; i < 5; i++) {
+      await new Promise(r => setTimeout(r, 1000))
+      await refreshInstances()
+    }
+  }, [refreshInstances])
+
+  const handleStop = useCallback(async (id: number) => {
+    await instancesApi.stop(id)
+    setFftData(null)
+    await refreshInstances()
+  }, [refreshInstances])
 
   return (
     <div className="space-y-6">
@@ -88,7 +107,7 @@ export default function Dashboard() {
           </div>
           <div>
             <p className="text-sm text-sdr-muted">Aktive Monitore</p>
-            <p className="text-xl font-bold">{runningIds.size}</p>
+            <p className="text-xl font-bold">{runningIds.length}</p>
           </div>
         </div>
         <div className="card flex items-center gap-4">
@@ -109,8 +128,9 @@ export default function Dashboard() {
             <InstanceStatusCard
               key={inst.id}
               instance={inst}
-              isRunning={runningIds.has(inst.id)}
-              onRefresh={refreshInstances}
+              isRunning={runningIds.includes(inst.id)}
+              onStart={handleStartAndSelect}
+              onStop={handleStop}
               onSelect={setSelectedId}
               selected={selectedId === inst.id}
             />
@@ -124,11 +144,11 @@ export default function Dashboard() {
           {UI.dash_spectrum}
           {selected && <span className="text-sdr-cyan ml-2">— {selected.name}</span>}
         </h3>
-        {selected && runningIds.has(selected.id) && selected.center_freq && selected.bandwidth ? (
+        {isSelectedRunning ? (
           <SpectrumDisplay
             fftData={fftData}
-            centerFreq={selected.center_freq}
-            bandwidth={selected.bandwidth}
+            centerFreq={selected?.center_freq ?? 0}
+            bandwidth={selected?.bandwidth ?? 0}
           />
         ) : (
           <div className="h-64 bg-sdr-bg rounded-lg flex items-center justify-center border border-sdr-border">

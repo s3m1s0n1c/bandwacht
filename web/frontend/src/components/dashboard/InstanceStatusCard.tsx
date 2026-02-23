@@ -1,5 +1,4 @@
 import { Play, Square, Radio } from 'lucide-react'
-import { instances as api } from '../../api/client'
 import { formatFreqShort } from '../../utils/format'
 import { UI } from '../../utils/strings'
 import StatusBadge from '../shared/StatusBadge'
@@ -8,24 +7,13 @@ import type { SdrInstance } from '../../types'
 interface InstanceStatusCardProps {
   instance: SdrInstance
   isRunning: boolean
-  onRefresh: () => void
+  onStart: (id: number) => void
+  onStop: (id: number) => void
   onSelect: (id: number) => void
   selected: boolean
 }
 
-export default function InstanceStatusCard({ instance, isRunning, onRefresh, onSelect, selected }: InstanceStatusCardProps) {
-  const handleStart = async (e: React.MouseEvent) => {
-    e.stopPropagation()
-    await api.start(instance.id)
-    onRefresh()
-  }
-
-  const handleStop = async (e: React.MouseEvent) => {
-    e.stopPropagation()
-    await api.stop(instance.id)
-    onRefresh()
-  }
-
+export default function InstanceStatusCard({ instance, isRunning, onStart, onStop, onSelect, selected }: InstanceStatusCardProps) {
   return (
     <div
       onClick={() => onSelect(instance.id)}
@@ -55,12 +43,18 @@ export default function InstanceStatusCard({ instance, isRunning, onRefresh, onS
 
       <div className="flex gap-2">
         {isRunning ? (
-          <button onClick={handleStop} className="btn-danger flex items-center gap-1.5 text-xs py-1.5">
+          <button
+            onClick={(e) => { e.stopPropagation(); onStop(instance.id) }}
+            className="btn-danger flex items-center gap-1.5 text-xs py-1.5"
+          >
             <Square className="w-3 h-3" />
             {UI.dash_stop}
           </button>
         ) : (
-          <button onClick={handleStart} className="btn-primary flex items-center gap-1.5 text-xs py-1.5">
+          <button
+            onClick={(e) => { e.stopPropagation(); onStart(instance.id) }}
+            className="btn-primary flex items-center gap-1.5 text-xs py-1.5"
+          >
             <Play className="w-3 h-3" />
             {UI.dash_start}
           </button>
