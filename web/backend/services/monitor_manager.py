@@ -237,6 +237,12 @@ class MonitorManager:
 
     async def _broadcast_fft(self, instance_id: int, fft_data: list):
         subs = self._fft_subscribers.get(instance_id, set())
+        if not hasattr(self, '_fft_log_count'):
+            self._fft_log_count = {}
+        count = self._fft_log_count.get(instance_id, 0) + 1
+        self._fft_log_count[instance_id] = count
+        if count == 1:
+            logger.info(f"First FFT broadcast for instance {instance_id}: {len(fft_data)} bins, {len(subs)} subscriber(s)")
         for cb in list(subs):
             try:
                 await cb(fft_data)

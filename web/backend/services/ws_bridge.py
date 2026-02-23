@@ -16,7 +16,9 @@ router = APIRouter()
 async def ws_spectrum(websocket: WebSocket, instance_id: int):
     """Stream live FFT data for an instance."""
     await websocket.accept()
+    logger.info(f"WS spectrum client connected for instance {instance_id}")
     queue: asyncio.Queue = asyncio.Queue(maxsize=5)
+    msg_count = 0
 
     async def on_fft(fft_data: list):
         try:
@@ -37,8 +39,11 @@ async def ws_spectrum(websocket: WebSocket, instance_id: int):
         while True:
             fft_data = await queue.get()
             await websocket.send_text(json.dumps(fft_data))
-    except (WebSocketDisconnect, Exception):
-        pass
+            msg_count += 1
+            if msg_count == 1:
+                logger.info(f"WS spectrum: first FFT frame sent to client (instance {instance_id}, {len(fft_data)} bins)")
+    except (WebSocketDisconnect, Exception) as e:
+        logger.info(f"WS spectrum client disconnected for instance {instance_id} ({type(e).__name__}, sent {msg_count} frames)")
     finally:
         manager.unsubscribe_fft(instance_id, on_fft)
 
@@ -47,6 +52,7 @@ async def ws_spectrum(websocket: WebSocket, instance_id: int):
 async def ws_events(websocket: WebSocket):
     """Stream live detection events globally."""
     await websocket.accept()
+    logger.info("WS events client connected")
     queue: asyncio.Queue = asyncio.Queue(maxsize=100)
 
     async def on_event(event_data: dict):
@@ -60,7 +66,7 @@ async def ws_events(websocket: WebSocket):
         while True:
             event_data = await queue.get()
             await websocket.send_text(json.dumps(event_data))
-    except (WebSocketDisconnect, Exception):
-        pass
+    except (WebSocketDisconnect, Exception) as e:
+        logger.info(f"WS events client disconnected ({type(e).__name__})")
     finally:
         manager.unsubscribe_events(on_event)
