@@ -741,15 +741,17 @@ class BandWacht:
             return None
 
         if self.receiver_config.fft_compression == "adpcm":
-            # ADPCM compressed: first byte is type, rest is data
             decoded = self.adpcm_decoder.decode(raw_data)
-            # Reset decoder for each new FFT frame
             self.adpcm_decoder.reset()
-            # Truncate to fft_size (ADPCM header bytes produce extra samples)
+            # Skip first 10 ADPCM warmup samples (COMPRESS_FFT_PAD_N)
+            # and convert from centidecibels (×100) to dB (÷100)
+            # See: OpenWebRX csdr compress_fft_adpcm_f_u8 / openwebrx.js
+            pad_n = 10
+            decoded = decoded[pad_n:]
             fft_size = self.receiver_config.fft_size
             if fft_size > 0 and len(decoded) > fft_size:
                 decoded = decoded[:fft_size]
-            return decoded
+            return decoded / 100.0
         else:
             # Uncompressed: raw float32 or uint8
             try:
