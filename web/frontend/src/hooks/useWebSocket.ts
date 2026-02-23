@@ -13,9 +13,18 @@ export function useWebSocket({ url, enabled = true, onMessage, reconnectInterval
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const onMessageRef = useRef(onMessage)
   onMessageRef.current = onMessage
+  const enabledRef = useRef(enabled)
+  enabledRef.current = enabled
 
   const connect = useCallback(() => {
-    if (!enabled) return
+    if (!enabledRef.current) return
+
+    // Clean up any existing connection
+    if (wsRef.current) {
+      wsRef.current.onclose = null
+      wsRef.current.close()
+      wsRef.current = null
+    }
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     const wsUrl = url.startsWith('ws') ? url : `${protocol}//${window.location.host}${url}`
@@ -27,7 +36,8 @@ export function useWebSocket({ url, enabled = true, onMessage, reconnectInterval
       ws.onopen = () => setConnected(true)
       ws.onclose = () => {
         setConnected(false)
-        if (enabled) {
+        wsRef.current = null
+        if (enabledRef.current) {
           reconnectTimer.current = setTimeout(connect, reconnectInterval)
         }
       }
@@ -41,19 +51,33 @@ export function useWebSocket({ url, enabled = true, onMessage, reconnectInterval
         }
       }
     } catch (_) {
-      if (enabled) {
+      if (enabledRef.current) {
         reconnectTimer.current = setTimeout(connect, reconnectInterval)
       }
     }
-  }, [url, enabled, reconnectInterval])
+  }, [url, reconnectInterval])
 
   useEffect(() => {
-    connect()
+    clearTimeout(reconnectTimer.current)
+    if (wsRef.current) {
+      wsRef.current.onclose = null
+      wsRef.current.close()
+      wsRef.current = null
+    }
+    if (enabled) {
+      connect()
+    } else {
+      setConnected(false)
+    }
     return () => {
       clearTimeout(reconnectTimer.current)
-      wsRef.current?.close()
+      if (wsRef.current) {
+        wsRef.current.onclose = null
+        wsRef.current.close()
+        wsRef.current = null
+      }
     }
-  }, [connect])
+  }, [enabled, connect])
 
   return { connected }
 }

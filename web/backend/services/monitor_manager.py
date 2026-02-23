@@ -78,6 +78,8 @@ class WebBandWacht(BandWacht):
         super().__init__(*args, **kwargs)
         self._on_fft = on_fft_callback
         self._on_connected = on_connected_callback
+        self._last_fft: Optional[list] = None
+        self._fft_frame_count = 0
 
     def _init_analyzer(self):
         super()._init_analyzer()
@@ -85,11 +87,54 @@ class WebBandWacht(BandWacht):
             asyncio.ensure_future(self._on_connected(self.receiver_config))
 
     async def _handle_fft(self, data: bytes):
-        await super()._handle_fft(data)
-        if self._on_fft and self.analyzer:
-            fft_data = self._process_fft_data(data)
-            if fft_data is not None:
-                await self._on_fft(fft_data.tolist())
+        """Handle FFT data: run analysis and forward to web callback."""
+        if self.analyzer is None:
+            return
+
+        fft_data = self._process_fft_data(data)
+        if fft_data is None:
+            return
+
+        self.fft_count += 1
+        self._fft_frame_count += 1
+
+        # Log first frame for debugging
+        if self._fft_frame_count == 1:
+            sample = fft_data[:10].tolist() if len(fft_data) >= 10 else fft_data.tolist()
+            logger.info(f"First FFT frame: {len(fft_data)} bins, "
+                        f"min={float(fft_data.min()):.1f}, max={float(fft_data.max()):.1f}, "
+                        f"mean={float(fft_data.mean()):.1f}, sample={sample}")
+
+        # Run analysis (replicate parent logic)
+        if self.targets:
+            events = self.analyzer.analyze_band(fft_data, self.targets)
+            for event in events:
+                self.event_count += 1
+                await self._notify_all(event)
+                recording_file = ""
+                if self.recorder:
+                    recording_file = self.recorder.start_recording(
+                        event.target_label, event.freq_hz
+                    )
+                    event.recording_file = recording_file
+                self._log_csv(event, recording_file)
+
+        # Full band scan (same as parent: every ~1s at 9fps)
+        if self.scan_full_band and self.fft_count % 10 == 0:
+            signals = self.analyzer.scan_full_band(
+                fft_data, threshold_db=self.threshold_db
+            )
+            for sig in signals:
+                freq_mhz = sig["freq_hz"] / 1e6
+                logger.debug(
+                    f"  Signal: {freq_mhz:.4f} MHz "
+                    f"({sig['peak_db']:.1f} dB, "
+                    f"BW: {sig['bandwidth_hz']/1e3:.1f} kHz)"
+                )
+
+        # Forward to web callback
+        if self._on_fft:
+            await self._on_fft(fft_data.tolist())
 
 
 class MonitorManager:
