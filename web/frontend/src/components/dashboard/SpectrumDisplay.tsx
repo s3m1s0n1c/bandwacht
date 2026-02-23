@@ -12,9 +12,20 @@ const SPECTRUM_COLOR = '#00ff41'
 const FILL_COLOR = 'rgba(0, 255, 65, 0.08)'
 const LABEL_COLOR = '#9ca3af'
 
+/** Compute percentile value from sorted array */
+function percentile(sorted: number[], p: number): number {
+  const idx = (p / 100) * (sorted.length - 1)
+  const lo = Math.floor(idx)
+  const hi = Math.ceil(idx)
+  if (lo === hi) return sorted[lo]
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo)
+}
+
 export default function SpectrumDisplay({ fftData, centerFreq, bandwidth, className = '' }: SpectrumDisplayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const prevData = useRef<number[] | null>(null)
+  // Smoothed display range for stable rendering
+  const rangeRef = useRef<{ min: number; max: number } | null>(null)
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current
@@ -43,15 +54,35 @@ export default function SpectrumDisplay({ fftData, centerFreq, bandwidth, classN
     if (data) prevData.current = data
     if (!data || data.length === 0) return
 
-    const dbMin = -120
-    const dbMax = -20
-    const dbRange = dbMax - dbMin
+    // Auto-scale: use percentiles to find stable display range
+    const sorted = [...data].sort((a, b) => a - b)
+    const p5 = percentile(sorted, 2)
+    const p95 = percentile(sorted, 98)
+    const margin = Math.max(Math.abs(p95 - p5) * 0.1, 10)
 
-    // Grid lines
+    const targetMin = p5 - margin
+    const targetMax = p95 + margin
+
+    // Smooth transitions (exponential moving average)
+    const alpha = rangeRef.current ? 0.1 : 1.0
+    if (!rangeRef.current) {
+      rangeRef.current = { min: targetMin, max: targetMax }
+    } else {
+      rangeRef.current.min += (targetMin - rangeRef.current.min) * alpha
+      rangeRef.current.max += (targetMax - rangeRef.current.max) * alpha
+    }
+
+    const valMin = rangeRef.current.min
+    const valMax = rangeRef.current.max
+    const valRange = valMax - valMin || 1
+
+    // Grid lines (5 evenly spaced)
     ctx.strokeStyle = GRID_COLOR
     ctx.lineWidth = 0.5
-    for (let db = dbMin; db <= dbMax; db += 20) {
-      const y = padding.top + plotH * (1 - (db - dbMin) / dbRange)
+    const gridSteps = 5
+    for (let i = 0; i <= gridSteps; i++) {
+      const val = valMin + (valRange / gridSteps) * i
+      const y = padding.top + plotH * (1 - i / gridSteps)
       ctx.beginPath()
       ctx.moveTo(padding.left, y)
       ctx.lineTo(padding.left + plotW, y)
@@ -60,7 +91,7 @@ export default function SpectrumDisplay({ fftData, centerFreq, bandwidth, classN
       ctx.fillStyle = LABEL_COLOR
       ctx.font = '10px monospace'
       ctx.textAlign = 'right'
-      ctx.fillText(`${db}`, padding.left - 5, y + 3)
+      ctx.fillText(`${Math.round(val)}`, padding.left - 5, y + 3)
     }
 
     // Frequency labels
@@ -82,8 +113,8 @@ export default function SpectrumDisplay({ fftData, centerFreq, bandwidth, classN
     const binStep = plotW / data.length
     for (let i = 0; i < data.length; i++) {
       const x = padding.left + i * binStep
-      const db = Math.max(dbMin, Math.min(dbMax, data[i]))
-      const y = padding.top + plotH * (1 - (db - dbMin) / dbRange)
+      const clamped = Math.max(valMin, Math.min(valMax, data[i]))
+      const y = padding.top + plotH * (1 - (clamped - valMin) / valRange)
       if (i === 0) ctx.moveTo(x, y)
       else ctx.lineTo(x, y)
     }
