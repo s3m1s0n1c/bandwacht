@@ -1,0 +1,39 @@
+{
+    "_comment": "Multi-SDR Monitoring - überwache mehrere öffentliche WebRX Instanzen",
+
+    "instances": [
+        {
+            "url": "http://sdr1.example.at:8073",
+            "name": "Kärnten VHF",
+            "targets": [
+                {"freq_mhz": 145.500, "label": "S20 Anruf", "bandwidth_khz": 12},
+                {"freq_mhz": 145.6125, "label": "OE8XKK", "bandwidth_khz": 12}
+            ]
+        },
+        {
+            "url": "http://sdr2.example.at:8073",
+            "name": "Kärnten UHF",
+            "targets": [
+                {"freq_mhz": 438.950, "label": "OE8XVK", "bandwidth_khz": 12},
+                {"freq_mhz": 439.000, "label": "OE8XDK", "bandwidth_khz": 12}
+            ]
+        },
+        {
+            "url": "http://sdr3.example.at:8073",
+            "name": "Steiermark",
+            "scan_full_band": true
+        }
+    ],
+
+    "global": {
+        "threshold_db": -55,
+        "record": false,
+        "log_csv": true,
+        "notify": {
+            "console": true,
+            "webhook": {
+                "url": "http://funkpilot.oeradio.at/api/bandwacht/events"
+            }
+        }
+    }
+}

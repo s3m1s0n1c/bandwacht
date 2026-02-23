@@ -1,0 +1,23 @@
+services:
+  bandwacht:
+    build: .
+    container_name: bandwacht
+    restart: unless-stopped
+    volumes:
+      - ./config:/app/config:ro
+      - ./recordings:/app/recordings
+      - ./logs:/app/logs
+    # Override command for different modes:
+    # Single instance with config:
+    command: ["--config", "/app/config/bandwacht.json"]
+    # Multi instance:
+    # command: ["python", "bandwacht_multi.py", "--config", "/app/config/multi_instance.json"]
+    # CLI mode:
+    # command: ["--url", "http://my-webrx:8073", "--band", "2m", "--scan", "--record"]
+    environment:
+      - TZ=Europe/Vienna
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
