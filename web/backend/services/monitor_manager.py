@@ -154,12 +154,13 @@ class MonitorManager:
             await self._broadcast_fft(instance_id, fft_data)
 
         async def on_connected(receiver_config):
-            await crud.update_instance_connection(
-                db, instance_id, True,
-                center_freq=receiver_config.center_freq,
-                bandwidth=receiver_config.bandwidth,
-                fft_size=receiver_config.fft_size,
-            )
+            async with async_session() as session:
+                await crud.update_instance_connection(
+                    session, instance_id, True,
+                    center_freq=receiver_config.center_freq,
+                    bandwidth=receiver_config.bandwidth,
+                    fft_size=receiver_config.fft_size,
+                )
 
         monitor = WebBandWacht(
             url=inst.url,
@@ -177,11 +178,11 @@ class MonitorManager:
 
         self._instances[instance_id] = monitor
         self._tasks[instance_id] = asyncio.create_task(
-            self._run_monitor(instance_id, monitor, db)
+            self._run_monitor(instance_id, monitor)
         )
         logger.info(f"Started monitoring instance {inst.name} ({inst.url})")
 
-    async def _run_monitor(self, instance_id: int, monitor: WebBandWacht, db: AsyncSession):
+    async def _run_monitor(self, instance_id: int, monitor: WebBandWacht):
         try:
             await monitor.run()
         except asyncio.CancelledError:
@@ -189,7 +190,8 @@ class MonitorManager:
         except Exception as e:
             logger.error(f"Monitor {instance_id} error: {e}")
         finally:
-            await crud.update_instance_connection(db, instance_id, False)
+            async with async_session() as session:
+                await crud.update_instance_connection(session, instance_id, False)
             self._instances.pop(instance_id, None)
             self._tasks.pop(instance_id, None)
 

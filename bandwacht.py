@@ -745,6 +745,10 @@ class BandWacht:
             decoded = self.adpcm_decoder.decode(raw_data)
             # Reset decoder for each new FFT frame
             self.adpcm_decoder.reset()
+            # Truncate to fft_size (ADPCM header bytes produce extra samples)
+            fft_size = self.receiver_config.fft_size
+            if fft_size > 0 and len(decoded) > fft_size:
+                decoded = decoded[:fft_size]
             return decoded
         else:
             # Uncompressed: raw float32 or uint8
