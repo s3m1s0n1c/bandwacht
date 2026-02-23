@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-sdr-bg text-sdr-text antialiased;
+  }
+
+  ::-webkit-scrollbar {
+    @apply w-2;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-sdr-bg;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-sdr-border rounded-full;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-4 py-2 bg-sdr-cyan text-white rounded-lg hover:bg-cyan-500 transition-colors font-medium text-sm;
+  }
+  .btn-danger {
+    @apply px-4 py-2 bg-sdr-red text-white rounded-lg hover:bg-red-500 transition-colors font-medium text-sm;
+  }
+  .btn-ghost {
+    @apply px-4 py-2 text-sdr-muted hover:text-sdr-text hover:bg-sdr-border/50 rounded-lg transition-colors text-sm;
+  }
+  .card {
+    @apply bg-sdr-surface border border-sdr-border rounded-xl p-4;
+  }
+  .input {
+    @apply bg-sdr-bg border border-sdr-border rounded-lg px-3 py-2 text-sdr-text text-sm
+           focus:outline-none focus:border-sdr-cyan focus:ring-1 focus:ring-sdr-cyan/50 transition-colors;
+  }
+  .label {
+    @apply block text-sm font-medium text-sdr-muted mb-1;
+  }
+}

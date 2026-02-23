@@ -1,0 +1,46 @@
+# Multi-stage build: Node for frontend, Python for backend
+# Build context: bandwacht/ (project root)
+
+# Stage 1: Build frontend
+FROM node:22-alpine AS frontend-build
+WORKDIR /build
+COPY web/frontend/package.json web/frontend/package-lock.json* ./
+RUN npm install
+COPY web/frontend/ ./
+RUN npm run build
+
+# Stage 2: Python runtime
+FROM python:3.12-slim
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+
+# Install backend dependencies
+COPY web/backend/requirements.txt ./requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy bandwacht engine
+COPY bandwacht.py ./bandwacht.py
+COPY bandwacht_multi.py ./bandwacht_multi.py
+
+# Copy backend
+COPY web/backend/ ./web/backend/
+
+# Copy built frontend
+COPY --from=frontend-build /build/dist ./web/frontend/dist
+
+# Copy entrypoint
+COPY web/docker-entrypoint.sh ./
+RUN chmod +x docker-entrypoint.sh
+
+# Create non-root user and directories
+RUN mkdir -p /app/data /app/recordings \
+    && adduser --disabled-password --gecos "" --uid 1001 app \
+    && chown -R app:app /app /app/data /app/recordings
+
+ENV BANDWACHT_DATABASE_URL=sqlite+aiosqlite:////app/data/bandwacht_web.db
+ENV BANDWACHT_RECORDINGS_DIR=/app/recordings
+
+EXPOSE 8000
+USER app
+
+ENTRYPOINT ["./docker-entrypoint.sh"]

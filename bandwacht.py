@@ -677,7 +677,8 @@ class BandWacht:
     def _parse_server_message(self, msg: str):
         """Parse text messages from the OpenWebRX server."""
         # OpenWebRX sends config as "MSG key=value key=value ... setup"
-        # or as JSON in newer versions
+        # or as JSON in newer versions (v1.2+):
+        #   {"type": "config", "value": {"center_freq": ..., "samp_rate": ...}}
         if msg.startswith("MSG "):
             parts = msg[4:].split()
             for part in parts:
@@ -688,8 +689,18 @@ class BandWacht:
             try:
                 data = json.loads(msg)
                 if isinstance(data, dict):
-                    for key, value in data.items():
-                        self._handle_config(key, str(value))
+                    msg_type = data.get("type")
+                    value = data.get("value")
+                    if msg_type in ("config", "secondary_config") and isinstance(value, dict):
+                        for key, val in value.items():
+                            self._handle_config(key, str(val))
+                    elif msg_type == "receiver_details" and isinstance(value, dict):
+                        for key, val in value.items():
+                            self._handle_config(key, str(val))
+                    else:
+                        # Flat JSON fallback
+                        for key, val in data.items():
+                            self._handle_config(key, str(val))
             except json.JSONDecodeError:
                 pass
 
