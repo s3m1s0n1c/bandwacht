@@ -1,5 +1,5 @@
 import { AlertTriangle } from 'lucide-react'
-import { formatFreqMHz, formatDb, formatTime } from '../../utils/format'
+import { formatFreqMHz, formatDb, formatSValue, formatTime } from '../../utils/format'
 import { UI } from '../../utils/strings'
 
 interface LiveEvent {
@@ -36,7 +36,7 @@ export default function EventFeed({ events }: EventFeedProps) {
               {ev.target_label || formatFreqMHz(ev.freq_hz)}
             </span>
             <span className="text-xs text-sdr-muted ml-2">
-              {formatFreqMHz(ev.freq_hz)} &middot; {formatDb(ev.peak_db)}
+              {formatFreqMHz(ev.freq_hz)} &middot; {formatDb(ev.peak_db)} ({formatSValue(ev.peak_db)})
               {ev.instance_name && <> &middot; @ {ev.instance_name}{ev.instance_grid && ` (${ev.instance_grid})`}</>}
             </span>
           </div>

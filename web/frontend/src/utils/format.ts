@@ -16,6 +16,14 @@ export function formatDb(db: number): string {
   return db.toFixed(1) + ' dB'
 }
 
+/** Convert dB to S-meter value. S9 = -73 dB, 6 dB per S-unit. */
+export function formatSValue(db: number, s9Ref: number = -73): string {
+  const diff = db - s9Ref
+  if (diff >= 0) return `S9+${Math.round(diff)} dB`
+  const sUnits = Math.max(0, Math.round(9 + diff / 6))
+  return `S${sUnits}`
+}
+
 /** Format duration in seconds */
 export function formatDuration(seconds: number): string {
   if (seconds < 1) return (seconds * 1000).toFixed(0) + ' ms'

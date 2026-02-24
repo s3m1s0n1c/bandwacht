@@ -1,5 +1,5 @@
 import { Play } from 'lucide-react'
-import { formatFreqMHz, formatDb, formatDuration, formatTimestamp } from '../../utils/format'
+import { formatFreqMHz, formatDb, formatSValue, formatDuration, formatTimestamp } from '../../utils/format'
 import { recordings } from '../../api/client'
 import { UI } from '../../utils/strings'
 import type { DetectionEvent } from '../../types'
@@ -38,7 +38,7 @@ export default function EventTable({ events, onPlayRecording }: EventTableProps)
               </td>
               <td className="py-2 pr-4 font-mono whitespace-nowrap">
                 <span className={ev.peak_db > -50 ? 'text-sdr-red' : 'text-sdr-amber'}>
-                  {formatDb(ev.peak_db)}
+                  {formatDb(ev.peak_db)} ({formatSValue(ev.peak_db)})
                 </span>
               </td>
               <td className="py-2 pr-4 text-sdr-muted whitespace-nowrap">

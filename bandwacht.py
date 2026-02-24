@@ -143,6 +143,20 @@ class DetectionEvent:
     instance_grid: str = ""
 
 
+def db_to_s_value(db: float, s9_ref: float = -73.0) -> str:
+    """Convert dB value to S-meter reading.
+
+    S9 = s9_ref (default -73 dBm), 6 dB per S-unit.
+    Above S9 reported as 'S9+XX dB'.
+    """
+    diff = db - s9_ref
+    if diff >= 0:
+        return f"S9+{diff:.0f} dB"
+    s_units = 9 + diff / 6.0
+    s_units = max(s_units, 0)
+    return f"S{s_units:.0f}"
+
+
 # ─── ADPCM Decoder ─────────────────────────────────────────────────────────
 
 class ADPCMDecoder:
@@ -229,9 +243,10 @@ class ConsoleNotification(NotificationBackend):
             receiver = f" @ {event.instance_name}"
             if event.instance_grid:
                 receiver += f" ({event.instance_grid})"
+        s_value = db_to_s_value(event.peak_db)
         logger.info(
             f"🔴 CARRIER DETECTED{label}: {freq_mhz:.4f} MHz "
-            f"| Peak: {event.peak_db:.1f} dB "
+            f"| Peak: {event.peak_db:.1f} dB ({s_value}) "
             f"| BW: {event.bandwidth_hz/1000:.1f} kHz{receiver}"
         )
         return True
@@ -250,6 +265,7 @@ class GotifyNotification(NotificationBackend):
             import aiohttp
             freq_mhz = event.freq_hz / 1e6
             label = f" [{event.target_label}]" if event.target_label else ""
+            s_value = db_to_s_value(event.peak_db)
             receiver_line = ""
             if event.instance_name:
                 grid = f" ({event.instance_grid})" if event.instance_grid else ""
@@ -261,7 +277,7 @@ class GotifyNotification(NotificationBackend):
                         "title": f"📡 Träger auf {freq_mhz:.4f} MHz{label}",
                         "message": (
                             f"Frequenz: {freq_mhz:.4f} MHz\n"
-                            f"Peak: {event.peak_db:.1f} dB\n"
+                            f"Peak: {event.peak_db:.1f} dB ({s_value})\n"
                             f"Zeit: {event.timestamp.strftime('%H:%M:%S %Z')}\n"
                             f"Bandbreite: {event.bandwidth_hz/1000:.1f} kHz"
                             f"{receiver_line}"
@@ -287,6 +303,7 @@ class TelegramNotification(NotificationBackend):
             import aiohttp
             freq_mhz = event.freq_hz / 1e6
             label = f" [{event.target_label}]" if event.target_label else ""
+            s_value = db_to_s_value(event.peak_db)
             receiver_line = ""
             if event.instance_name:
                 grid = f" ({event.instance_grid})" if event.instance_grid else ""
@@ -294,7 +311,7 @@ class TelegramNotification(NotificationBackend):
             text = (
                 f"📡 *Träger erkannt*{label}\n"
                 f"Frequenz: `{freq_mhz:.4f}` MHz\n"
-                f"Peak: `{event.peak_db:.1f}` dB\n"
+                f"Peak: `{event.peak_db:.1f}` dB ({s_value})\n"
                 f"Zeit: {event.timestamp.strftime('%H:%M:%S %Z')}"
                 f"{receiver_line}"
             )
@@ -325,6 +342,7 @@ class NtfyNotification(NotificationBackend):
             import aiohttp
             freq_mhz = event.freq_hz / 1e6
             label = f" [{event.target_label}]" if event.target_label else ""
+            s_value = db_to_s_value(event.peak_db)
             receiver_line = ""
             if event.instance_name:
                 grid = f" ({event.instance_grid})" if event.instance_grid else ""
@@ -339,7 +357,7 @@ class NtfyNotification(NotificationBackend):
                     },
                     data=(
                         f"Frequenz: {freq_mhz:.4f} MHz\n"
-                        f"Peak: {event.peak_db:.1f} dB\n"
+                        f"Peak: {event.peak_db:.1f} dB ({s_value})\n"
                         f"Zeit: {event.timestamp.strftime('%H:%M:%S %Z')}"
                         f"{receiver_line}"
                     )
@@ -367,6 +385,7 @@ class WebhookNotification(NotificationBackend):
                         "freq_hz": event.freq_hz,
                         "freq_mhz": event.freq_hz / 1e6,
                         "peak_db": event.peak_db,
+                        "s_value": db_to_s_value(event.peak_db),
                         "bandwidth_hz": event.bandwidth_hz,
                         "timestamp": event.timestamp.isoformat(),
                         "label": event.target_label,

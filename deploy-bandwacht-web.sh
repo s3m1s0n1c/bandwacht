@@ -65,18 +65,12 @@ BANDWACHT_NOTIFY_WEBHOOK_URL=${BANDWACHT_NOTIFY_WEBHOOK_URL:-}
 BANDWACHT_AUTH_JWT_SECRET=${BANDWACHT_AUTH_JWT_SECRET:-ffb6fd1d4976c9354a93ca92124b144cf217a54821b69dbf206040ba65f59a2a}
 ENVEOF
 
-# Step 2: Build Docker image on remote
-echo -e "${GREEN}Step 2: Building Docker image...${NC}"
+# Step 2: Build and restart container (volumes are preserved — data persists)
+echo -e "${GREEN}Step 2: Building and restarting container...${NC}"
 ssh "$DEPLOY_HOST" "
     cd '$REMOTE_DIR'
-    docker build $REBUILD_FLAG -t '$IMAGE_NAME' -f web/Dockerfile.web .
-"
-
-# Step 3: Restart container (volumes are preserved — data persists)
-echo -e "${GREEN}Step 3: Restarting container...${NC}"
-ssh "$DEPLOY_HOST" "
-    cd '$REMOTE_DIR'
-    docker compose -f docker-compose.web.yml up -d --force-recreate --build
+    docker compose -f docker-compose.web.yml build $REBUILD_FLAG
+    docker compose -f docker-compose.web.yml up -d --force-recreate
 "
 
 # Step 4: Verify deployment
