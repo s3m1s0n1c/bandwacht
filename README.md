@@ -15,6 +15,7 @@ BandWacht verbindet sich mit beliebigen OpenWebRX-Instanzen via WebSocket, über
 - 🐳 **Docker-Ready**: Containerisiert einsetzbar
 - 🔄 **Multi-Instanz**: Überwache mehrere SDRs gleichzeitig
 - ⚡ **Hysterese & Cooldown**: Vermeidet Fehlalarme durch intelligente Signalverarbeitung
+- 🌐 **Web UI**: Live-Spektrum, Konfiguration und Ereignis-Logbuch im Browser
 
 ## Schnellstart
 
@@ -38,10 +39,16 @@ python bandwacht.py --url http://my-webrx:8073 \
 # Full-Band-Scan mit Aufnahme
 python bandwacht.py --url http://my-webrx:8073 --scan --record
 
+# Profil umschalten (z.B. von 80m auf 2m)
+python bandwacht.py --url http://my-webrx:8073 --profile "rtlsdr|2m" --scan
+
 # Mit ntfy Benachrichtigung
 python bandwacht.py --url http://my-webrx:8073 \
   --freq 145.500 \
   --notify console ntfy --ntfy-topic mein-bandwacht
+
+# Debug-Modus (zeigt WebSocket-Nachrichten)
+python bandwacht.py --url http://my-webrx:8073 --scan --debug
 ```
 
 ### Konfigurationsdatei
@@ -68,6 +75,7 @@ docker compose up -d
 ```json
 {
     "url": "http://my-openwebrx:8073",
+    "profile": "rtlsdr|2m",
     "threshold_db": -55,
     "targets": [
         {
@@ -96,19 +104,55 @@ docker compose up -d
 
 ### CLI Parameter
 
+**Verbindung & Konfiguration**
+
+| Parameter | Kurz | Default | Beschreibung |
+|-----------|------|---------|-------------|
+| `--url` | `-u` | - | OpenWebRX URL (Pflicht, oder `--config`) |
+| `--config` | `-c` | - | JSON-Konfigurationsdatei (ersetzt alle anderen Argumente) |
+| `--profile` | `-p` | - | OpenWebRX Profil-ID zum Umschalten (z.B. `rtlsdr\|2m`) |
+
+**Frequenzauswahl**
+
+| Parameter | Kurz | Default | Beschreibung |
+|-----------|------|---------|-------------|
+| `--band` | `-b` | - | Bandname (2m, 70cm, 20m, etc.) |
+| `--freq` | `-f` | - | Frequenzen in MHz (mehrere möglich) |
+| `--freq-bw` | | 12 kHz | Überwachungsbandbreite pro Frequenz |
+| `--scan` | | off | Full-Band-Scan aktivieren |
+
+**Erkennung**
+
 | Parameter | Default | Beschreibung |
 |-----------|---------|-------------|
-| `--url` | - | OpenWebRX URL (Pflicht) |
-| `--band` | - | Bandname (2m, 70cm, 20m, etc.) |
-| `--freq` | - | Frequenzen in MHz |
-| `--freq-bw` | 12 kHz | Überwachungsbandbreite pro Frequenz |
-| `--scan` | off | Full-Band-Scan aktivieren |
-| `--threshold` | -55 dB | Erkennungsschwelle |
+| `--threshold` / `-t` | -55 dB | Erkennungsschwelle |
 | `--hysteresis` | 5 dB | Hysterese (Unterschied Trigger/Release) |
+| `--hold-time` | 2 s | Haltezeit bevor ein Event ausgelöst wird |
 | `--cooldown` | 10 s | Mindestabstand zwischen Alarmen |
-| `--record` | off | Aufnahme bei Erkennung |
-| `--csv` | off | CSV-Logging |
-| `--notify` | console | Notification-Backends |
+
+**Benachrichtigungen**
+
+| Parameter | Default | Beschreibung |
+|-----------|---------|-------------|
+| `--notify` / `-n` | console | Backends: `console`, `gotify`, `telegram`, `ntfy`, `webhook` |
+| `--gotify-url` | - | Gotify Server-URL |
+| `--gotify-token` | - | Gotify App-Token |
+| `--telegram-token` | - | Telegram Bot-Token |
+| `--telegram-chat` | - | Telegram Chat-ID |
+| `--ntfy-topic` | - | ntfy Topic-Name |
+| `--ntfy-server` | https://ntfy.sh | ntfy Server-URL |
+| `--webhook-url` | - | Webhook-URL für POST-Benachrichtigungen |
+
+**Aufnahme & Logging**
+
+| Parameter | Kurz | Default | Beschreibung |
+|-----------|------|---------|-------------|
+| `--record` | `-r` | off | Audioaufnahme bei Carrier-Erkennung |
+| `--recording-dir` | | ./recordings | Verzeichnis für Aufnahmen |
+| `--csv` | | off | CSV-Logging aktivieren |
+| `--csv-file` | | ./bandwacht_log.csv | CSV-Dateipfad |
+| `--verbose` | `-v` | off | Ausführliche Ausgabe |
+| `--debug` | | off | Debug-Ausgabe (inkl. WebSocket-Nachrichten) |
 
 ### Unterstützte Bänder
 
@@ -158,9 +202,73 @@ Dies ermöglicht z.B. ein verteiltes Monitoring-Netzwerk über ganz Österreich.
 ## Einschränkungen
 
 - **Ein Slot pro Verbindung**: Jede WebSocket-Verbindung belegt einen Client-Slot am Server
-- **Kein Frequency-Hopping**: Der SDR bleibt auf dem Band, das der Betreiber eingestellt hat
+- **Profil-Wechsel**: BandWacht kann das Profil (Band) am Server umschalten (`--profile`), aber der SDR kann nur ein Band gleichzeitig empfangen
 - **Audio-Aufnahme limitiert**: Audio wird nur für die aktuell eingestellte Demodulator-Frequenz empfangen (Limitation von OpenWebRX)
 - **Öffentliche Server**: Können jederzeit offline gehen oder die Konfiguration ändern
+
+## Web UI
+
+BandWacht enthält eine vollständige Web-Oberfläche zur Live-Überwachung, Konfiguration und Ereignishistorie.
+
+### Features
+
+- **Live-Spektrum**: Echtzeit-FFT-Darstellung im Browser (Canvas-basiert)
+- **Dashboard**: SDR-Instanzen starten/stoppen, Live-Ereignis-Feed
+- **Konfiguration**: SDR-Instanzen, Überwachungsziele, Erkennungsparameter, Benachrichtigungen
+- **Logbuch**: Paginierte Ereignishistorie mit Filtern, CSV-Export, Audio-Wiedergabe
+- **Statistiken**: Häufigste Frequenzen, tägliche/wöchentliche Übersicht (Recharts)
+- **Responsive**: Desktop + Mobile, dunkles SDR-Theme
+
+### Architektur
+
+```
+Browser (React + Vite + Tailwind)
+    │
+    ├── REST API ──► FastAPI Backend
+    │                   ├── MonitorManager (wraps BandWacht engine)
+    │                   ├── SQLite via async SQLAlchemy
+    │                   └── Serves built frontend as static files
+    │
+    └── WebSocket ◄── /ws/spectrum/{id} (live FFT) + /ws/events (detections)
+```
+
+### Web UI starten (Entwicklung)
+
+```bash
+# Backend
+cd web/backend && pip install -r requirements.txt
+uvicorn web.backend.main:app --reload
+
+# Frontend (separates Terminal)
+cd web/frontend && npm install && npm run dev
+```
+
+### Web UI deployen (Docker)
+
+```bash
+# .env.production konfigurieren
+cp .env.production.example .env.production
+# Werte anpassen (DEPLOY_HOST, REMOTE_DIR, etc.)
+
+# Deployment
+./deploy-bandwacht-web.sh
+```
+
+Die Web UI läuft als eigenständiger Docker-Container (Port 3418) und ist unter https://bandwacht.oeradio.at erreichbar.
+
+### API Endpunkte
+
+| Endpunkt | Beschreibung |
+|----------|-------------|
+| `GET/POST /api/v1/instances` | SDR-Instanzen CRUD |
+| `POST /api/v1/instances/{id}/start\|stop` | Monitor starten/stoppen |
+| `GET/POST /api/v1/targets` | Überwachungsziele CRUD |
+| `GET /api/v1/events` | Ereignisse (paginiert, filterbar) |
+| `GET /api/v1/events/export` | CSV-Export |
+| `GET /api/v1/recordings/{file}` | WAV-Aufnahmen streamen |
+| `GET/PUT /api/v1/settings` | Erkennungsparameter |
+| `WS /ws/spectrum/{id}` | Live FFT-Daten (~10fps) |
+| `WS /ws/events` | Live Erkennungs-Events |
 
 ## Integration mit FunkPilot
 

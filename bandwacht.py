@@ -1115,6 +1115,7 @@ def build_from_config(config: dict) -> BandWacht:
         recording_dir=config.get("recording_dir", "./recordings"),
         log_csv=config.get("log_csv", False),
         csv_file=config.get("csv_file", "./bandwacht_log.csv"),
+        desired_profile=config.get("profile"),
     )
 
 
@@ -1191,6 +1192,10 @@ Supported bands: """ + ", ".join(sorted(BANDS.keys()))
                        help="Enable audio recording on carrier detection")
     parser.add_argument("--recording-dir", default="./recordings",
                        help="Directory for recordings (default: ./recordings)")
+
+    # Profile switching
+    parser.add_argument("--profile", "-p",
+                       help="OpenWebRX profile ID to switch to (e.g. rtlsdr|2m, rtlsdr|70cm)")
 
     # Logging
     parser.add_argument("--csv", action="store_true", help="Log detections to CSV")
@@ -1286,6 +1291,7 @@ Supported bands: """ + ", ".join(sorted(BANDS.keys()))
         recording_dir=args.recording_dir,
         log_csv=args.csv,
         csv_file=args.csv_file,
+        desired_profile=args.profile,
     )
 
     try:

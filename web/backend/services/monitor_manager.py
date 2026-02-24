@@ -27,6 +27,7 @@ from bandwacht import (  # noqa: E402
 )
 
 from .. import crud  # noqa: E402
+from ..config import settings as app_settings  # noqa: E402
 from ..database import async_session  # noqa: E402
 
 logger = logging.getLogger("bandwacht.web.manager")
@@ -161,7 +162,6 @@ class MonitorManager:
 
         targets_db = await crud.get_targets(db, instance_id=instance_id)
         settings = await crud.get_settings(db)
-        notif_configs = await crud.get_notification_configs(db)
 
         watch_targets = []
         target_map: dict[float, int] = {}
@@ -188,13 +188,25 @@ class MonitorManager:
         )
         notifiers.append(db_notifier)
 
-        # External notifiers from config
-        for cfg in notif_configs:
-            if not cfg.enabled:
-                continue
-            n = self._build_notifier(cfg)
-            if n:
-                notifiers.append(n)
+        # External notifiers from env vars
+        notifiers.append(ConsoleNotification())
+        if app_settings.notify_gotify_url and app_settings.notify_gotify_token:
+            notifiers.append(GotifyNotification(
+                url=app_settings.notify_gotify_url,
+                token=app_settings.notify_gotify_token,
+            ))
+        if app_settings.notify_telegram_bot_token and app_settings.notify_telegram_chat_id:
+            notifiers.append(TelegramNotification(
+                bot_token=app_settings.notify_telegram_bot_token,
+                chat_id=app_settings.notify_telegram_chat_id,
+            ))
+        if app_settings.notify_ntfy_topic:
+            notifiers.append(NtfyNotification(
+                topic=app_settings.notify_ntfy_topic,
+                server=app_settings.notify_ntfy_server,
+            ))
+        if app_settings.notify_webhook_url:
+            notifiers.append(WebhookNotification(url=app_settings.notify_webhook_url))
 
         async def on_fft(fft_data: list):
             await self._broadcast_fft(instance_id, fft_data)
@@ -313,9 +325,8 @@ class MonitorManager:
 
     # --- Notification test ---
 
-    async def test_notification(self, cfg) -> bool:
-        config_data = json.loads(cfg.config_json) if isinstance(cfg.config_json, str) else cfg.config_json
-        n = self._build_notifier_from_data(cfg.backend, config_data)
+    async def test_notification(self, backend: str) -> bool:
+        n = self._build_notifier_for_backend(backend)
         if not n:
             return False
 
@@ -329,26 +340,28 @@ class MonitorManager:
         )
         return await n.send(test_event)
 
-    def _build_notifier(self, cfg) -> Optional[NotificationBackend]:
-        config_data = json.loads(cfg.config_json) if isinstance(cfg.config_json, str) else cfg.config_json
-        return self._build_notifier_from_data(cfg.backend, config_data)
-
-    def _build_notifier_from_data(self, backend: str, config: dict) -> Optional[NotificationBackend]:
+    def _build_notifier_for_backend(self, backend: str) -> Optional[NotificationBackend]:
         try:
             if backend == "console":
                 return ConsoleNotification()
             elif backend == "gotify":
-                return GotifyNotification(url=config["url"], token=config["token"])
+                return GotifyNotification(
+                    url=app_settings.notify_gotify_url,
+                    token=app_settings.notify_gotify_token,
+                )
             elif backend == "telegram":
-                return TelegramNotification(bot_token=config["bot_token"], chat_id=config["chat_id"])
+                return TelegramNotification(
+                    bot_token=app_settings.notify_telegram_bot_token,
+                    chat_id=app_settings.notify_telegram_chat_id,
+                )
             elif backend == "ntfy":
                 return NtfyNotification(
-                    topic=config["topic"],
-                    server=config.get("server", "https://ntfy.sh"),
+                    topic=app_settings.notify_ntfy_topic,
+                    server=app_settings.notify_ntfy_server,
                 )
             elif backend == "webhook":
-                return WebhookNotification(url=config["url"])
-        except (KeyError, TypeError) as e:
+                return WebhookNotification(url=app_settings.notify_webhook_url)
+        except Exception as e:
             logger.warning(f"Cannot build {backend} notifier: {e}")
         return None
 

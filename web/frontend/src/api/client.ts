@@ -102,18 +102,7 @@ export const recordings = {
 
 export const notifications = {
   list: () => request<import('../types').NotificationConfig[]>('/notifications'),
-  create: (data: { backend: string; enabled?: boolean; config_json?: Record<string, unknown> }) =>
-    request<import('../types').NotificationConfig>('/notifications', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
-  update: (id: number, data: Partial<{ enabled: boolean; config_json: Record<string, unknown> }>) =>
-    request<import('../types').NotificationConfig>(`/notifications/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }),
-  delete: (id: number) => request<{ ok: boolean }>(`/notifications/${id}`, { method: 'DELETE' }),
-  test: (id: number) => request<{ ok: boolean }>(`/notifications/${id}/test`, { method: 'POST' }),
+  test: (backend: string) => request<{ ok: boolean }>(`/notifications/${backend}/test`, { method: 'POST' }),
 }
 
 // --- Settings ---

@@ -1,17 +1,14 @@
 """Database CRUD operations."""
 
-import json
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .models import DetectionEvent, GlobalSetting, NotificationConfig, SdrInstance, WatchTarget
+from .models import DetectionEvent, GlobalSetting, SdrInstance, WatchTarget
 from .schemas import (
     InstanceCreate,
     InstanceUpdate,
-    NotificationCreate,
-    NotificationUpdate,
     SettingsRead,
     SettingsUpdate,
     TargetCreate,
@@ -198,51 +195,6 @@ async def get_event_stats(db: AsyncSession) -> dict:
         "top_frequencies": top_frequencies,
         "hourly_distribution": [],
     }
-
-
-# --- Notification Configs ---
-
-async def get_notification_configs(db: AsyncSession) -> list[NotificationConfig]:
-    result = await db.execute(select(NotificationConfig).order_by(NotificationConfig.id))
-    return list(result.scalars().all())
-
-
-async def get_notification_config(db: AsyncSession, config_id: int) -> NotificationConfig | None:
-    return await db.get(NotificationConfig, config_id)
-
-
-async def create_notification_config(db: AsyncSession, data: NotificationCreate) -> NotificationConfig:
-    cfg = NotificationConfig(
-        backend=data.backend,
-        enabled=data.enabled,
-        config_json=json.dumps(data.config_json),
-    )
-    db.add(cfg)
-    await db.commit()
-    await db.refresh(cfg)
-    return cfg
-
-
-async def update_notification_config(db: AsyncSession, config_id: int, data: NotificationUpdate) -> NotificationConfig | None:
-    cfg = await db.get(NotificationConfig, config_id)
-    if not cfg:
-        return None
-    if data.enabled is not None:
-        cfg.enabled = data.enabled
-    if data.config_json is not None:
-        cfg.config_json = json.dumps(data.config_json)
-    await db.commit()
-    await db.refresh(cfg)
-    return cfg
-
-
-async def delete_notification_config(db: AsyncSession, config_id: int) -> bool:
-    cfg = await db.get(NotificationConfig, config_id)
-    if not cfg:
-        return False
-    await db.delete(cfg)
-    await db.commit()
-    return True
 
 
 # --- Global Settings ---

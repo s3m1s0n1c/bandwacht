@@ -97,27 +97,6 @@ class EventStats(BaseModel):
     hourly_distribution: list[dict[str, Any]]
 
 
-# --- Notification Configs ---
-
-class NotificationBase(BaseModel):
-    backend: str
-    enabled: bool = True
-    config_json: dict[str, Any] = {}
-
-class NotificationCreate(NotificationBase):
-    pass
-
-class NotificationUpdate(BaseModel):
-    enabled: bool | None = None
-    config_json: dict[str, Any] | None = None
-
-class NotificationRead(NotificationBase):
-    model_config = ConfigDict(from_attributes=True)
-    id: int
-    created_at: datetime
-    updated_at: datetime
-
-
 # --- Global Settings ---
 
 class SettingsRead(BaseModel):

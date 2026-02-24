@@ -43,12 +43,9 @@ export interface DetectionEvent {
 }
 
 export interface NotificationConfig {
-  id: number
   backend: string
   enabled: boolean
-  config_json: Record<string, unknown>
-  created_at: string
-  updated_at: string
+  configured: boolean
 }
 
 export interface GlobalSettings {
