@@ -19,10 +19,39 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    # Auto-start all enabled instances
+    await _autostart_instances()
     yield
     # Shutdown: stop all monitors
     from .services.monitor_manager import manager
     await manager.stop_all()
+
+
+async def _autostart_instances():
+    """Start monitoring for all enabled SDR instances on boot."""
+    import logging
+    from . import crud
+    from .database import async_session
+    from .services.monitor_manager import manager
+
+    logger = logging.getLogger("bandwacht.web")
+    try:
+        async with async_session() as db:
+            instances = await crud.get_instances(db)
+            started = 0
+            for inst in instances:
+                if not inst.enabled:
+                    continue
+                try:
+                    await manager.start_instance(inst.id, db)
+                    started += 1
+                    logger.info(f"Auto-started instance '{inst.name}'")
+                except Exception as e:
+                    logger.warning(f"Failed to auto-start instance '{inst.name}': {e}")
+            if started:
+                logger.info(f"Auto-started {started} instance(s)")
+    except Exception as e:
+        logging.getLogger("bandwacht.web").error(f"Auto-start failed: {e}")
 
 
 app = FastAPI(title="BandWacht Web", version="0.1.0", lifespan=lifespan)
