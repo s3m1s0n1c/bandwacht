@@ -4,8 +4,9 @@ import asyncio
 import json
 import logging
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 
+from ..auth import verify_ws_token
 from .monitor_manager import manager
 
 logger = logging.getLogger("bandwacht.web.ws")
@@ -13,8 +14,13 @@ router = APIRouter()
 
 
 @router.websocket("/ws/spectrum/{instance_id}")
-async def ws_spectrum(websocket: WebSocket, instance_id: int):
+async def ws_spectrum(websocket: WebSocket, instance_id: int, token: str = Query(default="")):
     """Stream live FFT data for an instance."""
+    user = verify_ws_token(token)
+    if not user:
+        await websocket.close(code=1008, reason="Nicht autorisiert")
+        return
+
     await websocket.accept()
     logger.info(f"WS spectrum client connected for instance {instance_id}")
     queue: asyncio.Queue = asyncio.Queue(maxsize=5)
@@ -49,8 +55,13 @@ async def ws_spectrum(websocket: WebSocket, instance_id: int):
 
 
 @router.websocket("/ws/events")
-async def ws_events(websocket: WebSocket):
+async def ws_events(websocket: WebSocket, token: str = Query(default="")):
     """Stream live detection events globally."""
+    user = verify_ws_token(token)
+    if not user:
+        await websocket.close(code=1008, reason="Nicht autorisiert")
+        return
+
     await websocket.accept()
     logger.info("WS events client connected")
     queue: asyncio.Queue = asyncio.Queue(maxsize=100)

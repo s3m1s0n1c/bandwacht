@@ -1,15 +1,68 @@
 const BASE = '/api/v1'
 
+const TOKEN_KEY = 'bandwacht_token'
+
+export function getToken(): string | null {
+  return localStorage.getItem(TOKEN_KEY)
+}
+
+export function setToken(token: string): void {
+  localStorage.setItem(TOKEN_KEY, token)
+}
+
+export function clearToken(): void {
+  localStorage.removeItem(TOKEN_KEY)
+}
+
+let onAuthError: (() => void) | null = null
+
+export function setOnAuthError(cb: () => void): void {
+  onAuthError = cb
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  const token = getToken()
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
   const res = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: { ...headers, ...options?.headers },
     ...options,
   })
+  if (res.status === 401) {
+    clearToken()
+    onAuthError?.()
+    throw new Error('Nicht autorisiert')
+  }
   if (!res.ok) {
     const body = await res.json().catch(() => ({ detail: res.statusText }))
     throw new Error(body.detail || `HTTP ${res.status}`)
   }
   return res.json()
+}
+
+// --- Auth ---
+
+export const auth = {
+  login: async (username: string, password: string): Promise<import('../types').TokenResponse> => {
+    const body = new URLSearchParams({ username, password, grant_type: 'password' })
+    const res = await fetch(`${BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({ detail: res.statusText }))
+      throw new Error(data.detail || `HTTP ${res.status}`)
+    }
+    const data: import('../types').TokenResponse = await res.json()
+    setToken(data.access_token)
+    return data
+  },
+  logout: () => {
+    clearToken()
+  },
 }
 
 // --- Instances ---

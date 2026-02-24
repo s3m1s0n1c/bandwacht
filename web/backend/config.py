@@ -22,6 +22,12 @@ class Settings(BaseSettings):
     notify_ntfy_server: str = "https://ntfy.sh"
     notify_webhook_url: str = ""
 
+    # Authentication
+    auth_username: str = "oe8yml"
+    auth_password_hash: str = "$2b$12$hD9Bu1eFl84XDR/IIofkT.o4YPwo11leMHe3vamW7.nwZMGuR2f5G"
+    auth_jwt_secret: str = "ffb6fd1d4976c9354a93ca92124b144cf217a54821b69dbf206040ba65f59a2a"
+    auth_jwt_expire_hours: int = 24
+
     model_config = {"env_prefix": "BANDWACHT_"}
 
     @property

@@ -7,10 +7,11 @@ import type { Page } from '../../types'
 interface AppLayoutProps {
   currentPage: Page
   onNavigate: (page: Page) => void
+  onLogout: () => void
   children: React.ReactNode
 }
 
-export default function AppLayout({ currentPage, onNavigate, children }: AppLayoutProps) {
+export default function AppLayout({ currentPage, onNavigate, onLogout, children }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [backendConnected, setBackendConnected] = useState(false)
 
@@ -60,6 +61,7 @@ export default function AppLayout({ currentPage, onNavigate, children }: AppLayo
           currentPage={currentPage}
           isConnected={backendConnected}
           onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
+          onLogout={onLogout}
         />
         <main className="flex-1 overflow-auto p-4 md:p-6">
           {children}

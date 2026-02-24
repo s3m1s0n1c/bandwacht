@@ -73,4 +73,9 @@ export interface PaginatedResponse<T> {
   pages: number
 }
 
+export interface TokenResponse {
+  access_token: string
+  token_type: string
+}
+
 export type Page = 'dashboard' | 'config' | 'history'

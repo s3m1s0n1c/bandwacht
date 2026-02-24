@@ -1,4 +1,4 @@
-import { Menu, Wifi, WifiOff } from 'lucide-react'
+import { LogOut, Menu, Wifi, WifiOff } from 'lucide-react'
 import { UI } from '../../utils/strings'
 import type { Page } from '../../types'
 
@@ -6,6 +6,7 @@ interface HeaderProps {
   currentPage: Page
   isConnected: boolean
   onMenuToggle: () => void
+  onLogout: () => void
 }
 
 const pageTitles: Record<Page, string> = {
@@ -14,7 +15,7 @@ const pageTitles: Record<Page, string> = {
   history: UI.nav_history,
 }
 
-export default function Header({ currentPage, isConnected, onMenuToggle }: HeaderProps) {
+export default function Header({ currentPage, isConnected, onMenuToggle, onLogout }: HeaderProps) {
   return (
     <header className="h-14 bg-sdr-surface border-b border-sdr-border flex items-center justify-between px-4 shrink-0">
       <div className="flex items-center gap-3">
@@ -27,7 +28,7 @@ export default function Header({ currentPage, isConnected, onMenuToggle }: Heade
         <h2 className="text-lg font-semibold">{pageTitles[currentPage]}</h2>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
         {isConnected ? (
           <div className="flex items-center gap-1.5 text-sdr-green text-xs">
             <Wifi className="w-3.5 h-3.5" />
@@ -39,6 +40,13 @@ export default function Header({ currentPage, isConnected, onMenuToggle }: Heade
             <span>{UI.dash_disconnected}</span>
           </div>
         )}
+        <button
+          onClick={onLogout}
+          className="text-sdr-muted hover:text-sdr-red transition-colors"
+          title={UI.auth_logout}
+        >
+          <LogOut className="w-4 h-4" />
+        </button>
       </div>
     </header>
   )

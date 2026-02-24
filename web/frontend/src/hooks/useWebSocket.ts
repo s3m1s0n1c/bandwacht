@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { getToken } from '../api/client'
 
 interface UseWebSocketOptions {
   url: string
@@ -27,7 +28,10 @@ export function useWebSocket({ url, enabled = true, onMessage, reconnectInterval
     }
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const wsUrl = url.startsWith('ws') ? url : `${protocol}//${window.location.host}${url}`
+    const base = url.startsWith('ws') ? url : `${protocol}//${window.location.host}${url}`
+    const token = getToken()
+    const sep = base.includes('?') ? '&' : '?'
+    const wsUrl = token ? `${base}${sep}token=${encodeURIComponent(token)}` : base
 
     try {
       const ws = new WebSocket(wsUrl)

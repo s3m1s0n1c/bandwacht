@@ -58,6 +58,14 @@ export const UI = {
   hist_top_freq: 'Häufigste Frequenzen',
   hist_hourly: 'Stündliche Verteilung',
 
+  // Auth
+  auth_login: 'Anmelden',
+  auth_username: 'Benutzername',
+  auth_password: 'Passwort',
+  auth_login_title: 'Anmeldung',
+  auth_logout: 'Abmelden',
+  auth_error: 'Falscher Benutzername oder Passwort',
+
   // Common
   loading: 'Laden...',
   error: 'Fehler',
