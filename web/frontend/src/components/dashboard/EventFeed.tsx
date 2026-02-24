@@ -9,6 +9,8 @@ interface LiveEvent {
   freq_hz: number
   peak_db: number
   target_label: string
+  instance_name?: string
+  instance_grid?: string
 }
 
 interface EventFeedProps {
@@ -35,6 +37,7 @@ export default function EventFeed({ events }: EventFeedProps) {
             </span>
             <span className="text-xs text-sdr-muted ml-2">
               {formatFreqMHz(ev.freq_hz)} &middot; {formatDb(ev.peak_db)}
+              {ev.instance_name && <> &middot; @ {ev.instance_name}{ev.instance_grid && ` (${ev.instance_grid})`}</>}
             </span>
           </div>
           <span className="text-xs text-sdr-muted shrink-0">

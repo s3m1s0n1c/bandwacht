@@ -43,7 +43,10 @@ export default function InstanceList({ instances, onRefresh }: InstanceListProps
               <div className="flex items-center gap-3 min-w-0">
                 <StatusBadge active={inst.enabled} activeText={UI.cfg_enabled} inactiveText="Deaktiviert" />
                 <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{inst.name}</p>
+                  <p className="text-sm font-medium truncate">
+                    {inst.name}
+                    {inst.grid_locator && <span className="ml-1.5 text-xs text-sdr-cyan">[{inst.grid_locator}]</span>}
+                  </p>
                   <p className="text-xs text-sdr-muted truncate">{inst.url}</p>
                 </div>
               </div>

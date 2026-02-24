@@ -70,12 +70,12 @@ export const auth = {
 export const instances = {
   list: () => request<import('../types').SdrInstance[]>('/instances'),
   get: (id: number) => request<import('../types').SdrInstance>(`/instances/${id}`),
-  create: (data: { name: string; url: string; enabled?: boolean; desired_profile?: string | null }) =>
+  create: (data: { name: string; url: string; enabled?: boolean; desired_profile?: string | null; grid_locator?: string | null }) =>
     request<import('../types').SdrInstance>('/instances', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  update: (id: number, data: Partial<{ name: string; url: string; enabled: boolean; desired_profile: string | null }>) =>
+  update: (id: number, data: Partial<{ name: string; url: string; enabled: boolean; desired_profile: string | null; grid_locator: string | null }>) =>
     request<import('../types').SdrInstance>(`/instances/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -95,7 +95,7 @@ export const targets = {
       `/targets${instanceId != null ? `?instance_id=${instanceId}` : ''}`
     ),
   create: (data: {
-    instance_id: number
+    instance_id: number | null
     freq_hz: number
     bandwidth_hz?: number
     label?: string

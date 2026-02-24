@@ -139,6 +139,8 @@ class DetectionEvent:
     duration_s: float = 0.0
     target_label: str = ""
     recording_file: Optional[str] = None
+    instance_name: str = ""
+    instance_grid: str = ""
 
 
 # ─── ADPCM Decoder ─────────────────────────────────────────────────────────
@@ -222,10 +224,15 @@ class ConsoleNotification(NotificationBackend):
     async def send(self, event: DetectionEvent) -> bool:
         freq_mhz = event.freq_hz / 1e6
         label = f" [{event.target_label}]" if event.target_label else ""
+        receiver = ""
+        if event.instance_name:
+            receiver = f" @ {event.instance_name}"
+            if event.instance_grid:
+                receiver += f" ({event.instance_grid})"
         logger.info(
             f"🔴 CARRIER DETECTED{label}: {freq_mhz:.4f} MHz "
             f"| Peak: {event.peak_db:.1f} dB "
-            f"| BW: {event.bandwidth_hz/1000:.1f} kHz"
+            f"| BW: {event.bandwidth_hz/1000:.1f} kHz{receiver}"
         )
         return True
 
@@ -243,6 +250,10 @@ class GotifyNotification(NotificationBackend):
             import aiohttp
             freq_mhz = event.freq_hz / 1e6
             label = f" [{event.target_label}]" if event.target_label else ""
+            receiver_line = ""
+            if event.instance_name:
+                grid = f" ({event.instance_grid})" if event.instance_grid else ""
+                receiver_line = f"\nEmpfänger: {event.instance_name}{grid}"
             async with aiohttp.ClientSession() as session:
                 async with session.post(
                     f"{self.url}/message?token={self.token}",
@@ -253,6 +264,7 @@ class GotifyNotification(NotificationBackend):
                             f"Peak: {event.peak_db:.1f} dB\n"
                             f"Zeit: {event.timestamp.strftime('%H:%M:%S %Z')}\n"
                             f"Bandbreite: {event.bandwidth_hz/1000:.1f} kHz"
+                            f"{receiver_line}"
                         ),
                         "priority": self.priority,
                     }
@@ -275,11 +287,16 @@ class TelegramNotification(NotificationBackend):
             import aiohttp
             freq_mhz = event.freq_hz / 1e6
             label = f" [{event.target_label}]" if event.target_label else ""
+            receiver_line = ""
+            if event.instance_name:
+                grid = f" ({event.instance_grid})" if event.instance_grid else ""
+                receiver_line = f"\nEmpfänger: {event.instance_name}{grid}"
             text = (
                 f"📡 *Träger erkannt*{label}\n"
                 f"Frequenz: `{freq_mhz:.4f}` MHz\n"
                 f"Peak: `{event.peak_db:.1f}` dB\n"
                 f"Zeit: {event.timestamp.strftime('%H:%M:%S %Z')}"
+                f"{receiver_line}"
             )
             async with aiohttp.ClientSession() as session:
                 async with session.get(
@@ -308,6 +325,10 @@ class NtfyNotification(NotificationBackend):
             import aiohttp
             freq_mhz = event.freq_hz / 1e6
             label = f" [{event.target_label}]" if event.target_label else ""
+            receiver_line = ""
+            if event.instance_name:
+                grid = f" ({event.instance_grid})" if event.instance_grid else ""
+                receiver_line = f"\nEmpfänger: {event.instance_name}{grid}"
             async with aiohttp.ClientSession() as session:
                 async with session.post(
                     f"{self.server}/{self.topic}",
@@ -320,6 +341,7 @@ class NtfyNotification(NotificationBackend):
                         f"Frequenz: {freq_mhz:.4f} MHz\n"
                         f"Peak: {event.peak_db:.1f} dB\n"
                         f"Zeit: {event.timestamp.strftime('%H:%M:%S %Z')}"
+                        f"{receiver_line}"
                     )
                 ) as resp:
                     return resp.status == 200
@@ -349,6 +371,8 @@ class WebhookNotification(NotificationBackend):
                         "timestamp": event.timestamp.isoformat(),
                         "label": event.target_label,
                         "duration_s": event.duration_s,
+                        "instance_name": event.instance_name,
+                        "instance_grid": event.instance_grid,
                     }
                 ) as resp:
                     return resp.status < 400

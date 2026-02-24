@@ -26,8 +26,8 @@ export default function TargetList({ targets, instances, onRefresh }: TargetList
     onRefresh()
   }
 
-  const getInstanceName = (id: number) =>
-    instances.find(i => i.id === id)?.name ?? `#${id}`
+  const getInstanceName = (id: number | null) =>
+    id === null ? UI.cfg_global_target : (instances.find(i => i.id === id)?.name ?? `#${id}`)
 
   return (
     <>
@@ -36,7 +36,6 @@ export default function TargetList({ targets, instances, onRefresh }: TargetList
         <button
           onClick={() => { setEditing(null); setShowForm(true) }}
           className="btn-primary flex items-center gap-1.5"
-          disabled={instances.length === 0}
         >
           <Plus className="w-3.5 h-3.5" />
           {UI.cfg_add_target}
@@ -45,7 +44,7 @@ export default function TargetList({ targets, instances, onRefresh }: TargetList
 
       {targets.length === 0 ? (
         <p className="text-sdr-muted text-sm py-4 text-center">
-          {instances.length === 0 ? 'Zuerst eine SDR-Instanz anlegen.' : 'Keine Überwachungsziele konfiguriert.'}
+          Keine Überwachungsziele konfiguriert.
         </p>
       ) : (
         <div className="space-y-2">

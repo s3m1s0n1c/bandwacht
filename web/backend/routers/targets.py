@@ -20,9 +20,10 @@ async def list_targets(
 
 @router.post("/targets", response_model=TargetRead, status_code=201)
 async def create_target(data: TargetCreate, db: AsyncSession = Depends(get_db)):
-    inst = await crud.get_instance(db, data.instance_id)
-    if not inst:
-        raise HTTPException(404, "SDR-Instanz nicht gefunden")
+    if data.instance_id is not None:
+        inst = await crud.get_instance(db, data.instance_id)
+        if not inst:
+            raise HTTPException(404, "SDR-Instanz nicht gefunden")
     return await crud.create_target(db, data)
 
 

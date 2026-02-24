@@ -15,6 +15,8 @@ interface LiveEvent {
   freq_hz: number
   peak_db: number
   target_label: string
+  instance_name?: string
+  instance_grid?: string
 }
 
 export default function Dashboard() {

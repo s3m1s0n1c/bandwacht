@@ -14,7 +14,7 @@ interface TargetFormProps {
 }
 
 export default function TargetForm({ target, instances, onClose, onSaved }: TargetFormProps) {
-  const [instanceId, setInstanceId] = useState(target?.instance_id ?? instances[0]?.id ?? 0)
+  const [instanceId, setInstanceId] = useState<number | null>(target?.instance_id ?? null)
   const [freqHz, setFreqHz] = useState(target?.freq_hz ?? 145_500_000)
   const [bandwidthHz, setBandwidthHz] = useState(target?.bandwidth_hz ?? 12000)
   const [label, setLabel] = useState(target?.label ?? '')
@@ -71,7 +71,8 @@ export default function TargetForm({ target, instances, onClose, onSaved }: Targ
         {!target && (
           <div>
             <label className="label">SDR-Instanz</label>
-            <select className="input w-full" value={instanceId} onChange={e => setInstanceId(Number(e.target.value))}>
+            <select className="input w-full" value={instanceId ?? ''} onChange={e => setInstanceId(e.target.value === '' ? null : Number(e.target.value))}>
+              <option value="">{UI.cfg_global_target}</option>
               {instances.map(i => (
                 <option key={i.id} value={i.id}>{i.name}</option>
               ))}

@@ -24,10 +24,11 @@ class SdrInstance(Base):
     bandwidth: Mapped[float | None] = mapped_column(Float, nullable=True)
     fft_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
     desired_profile: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    grid_locator: Mapped[str | None] = mapped_column(String(10), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
-    targets: Mapped[list["WatchTarget"]] = relationship(back_populates="instance", cascade="all, delete-orphan")
+    targets: Mapped[list["WatchTarget"]] = relationship(back_populates="instance", cascade="all")
     events: Mapped[list["DetectionEvent"]] = relationship(back_populates="instance", cascade="all, delete-orphan")
 
 
@@ -35,7 +36,7 @@ class WatchTarget(Base):
     __tablename__ = "watch_targets"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    instance_id: Mapped[int] = mapped_column(Integer, ForeignKey("sdr_instances.id", ondelete="CASCADE"), nullable=False)
+    instance_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("sdr_instances.id", ondelete="CASCADE"), nullable=True)
     freq_hz: Mapped[float] = mapped_column(Float, nullable=False)
     bandwidth_hz: Mapped[float] = mapped_column(Float, default=12000.0)
     label: Mapped[str] = mapped_column(String(255), default="")
@@ -44,7 +45,7 @@ class WatchTarget(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
-    instance: Mapped["SdrInstance"] = relationship(back_populates="targets")
+    instance: Mapped["SdrInstance | None"] = relationship(back_populates="targets")
     events: Mapped[list["DetectionEvent"]] = relationship(back_populates="target", cascade="all, delete-orphan")
 
 

@@ -14,6 +14,7 @@ export default function InstanceForm({ instance, onClose, onSaved }: InstanceFor
   const [name, setName] = useState(instance?.name ?? '')
   const [url, setUrl] = useState(instance?.url ?? '')
   const [enabled, setEnabled] = useState(instance?.enabled ?? true)
+  const [gridLocator, setGridLocator] = useState(instance?.grid_locator ?? '')
   const [desiredProfile, setDesiredProfile] = useState<string | null>(instance?.desired_profile ?? null)
   const [profiles, setProfiles] = useState<AvailableProfile[]>([])
   const [loadingProfiles, setLoadingProfiles] = useState(false)
@@ -39,9 +40,9 @@ export default function InstanceForm({ instance, onClose, onSaved }: InstanceFor
     setError(null)
     try {
       if (instance) {
-        await api.update(instance.id, { name, url, enabled, desired_profile: desiredProfile })
+        await api.update(instance.id, { name, url, enabled, desired_profile: desiredProfile, grid_locator: gridLocator || null })
       } else {
-        await api.create({ name, url, enabled, desired_profile: desiredProfile })
+        await api.create({ name, url, enabled, desired_profile: desiredProfile, grid_locator: gridLocator || null })
       }
       onSaved()
     } catch (err: any) {
@@ -73,6 +74,11 @@ export default function InstanceForm({ instance, onClose, onSaved }: InstanceFor
         <div>
           <label className="label">{UI.cfg_url}</label>
           <input className="input w-full" value={url} onChange={e => setUrl(e.target.value)} placeholder="http://sdr-host:8073" required />
+        </div>
+
+        <div>
+          <label className="label">{UI.cfg_grid_locator}</label>
+          <input className="input w-full" value={gridLocator} onChange={e => setGridLocator(e.target.value)} placeholder="JN66TO" maxLength={10} />
         </div>
 
         {instance && (

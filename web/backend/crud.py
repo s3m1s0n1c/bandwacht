@@ -1,8 +1,9 @@
 """Database CRUD operations."""
 
+import logging
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import func, select, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .models import DetectionEvent, GlobalSetting, SdrInstance, WatchTarget
@@ -14,6 +15,8 @@ from .schemas import (
     TargetCreate,
     TargetUpdate,
 )
+
+logger = logging.getLogger("bandwacht.web.crud")
 
 
 # --- SDR Instances ---
@@ -110,6 +113,68 @@ async def delete_target(db: AsyncSession, target_id: int) -> bool:
     await db.delete(target)
     await db.commit()
     return True
+
+
+async def get_global_targets(db: AsyncSession) -> list[WatchTarget]:
+    result = await db.execute(
+        select(WatchTarget).where(WatchTarget.instance_id.is_(None)).order_by(WatchTarget.id)
+    )
+    return list(result.scalars().all())
+
+
+async def get_targets_for_instance(db: AsyncSession, instance_id: int) -> list[WatchTarget]:
+    result = await db.execute(
+        select(WatchTarget)
+        .where(or_(WatchTarget.instance_id == instance_id, WatchTarget.instance_id.is_(None)))
+        .order_by(WatchTarget.id)
+    )
+    return list(result.scalars().all())
+
+
+# Default 2m global targets (direct simplex only)
+_DEFAULT_GLOBAL_TARGETS = [
+    # FM simplex 145.300–145.600
+    (145_300_000, 12500, "S12", -55.0),
+    (145_337_500, 12500, "S13", -55.0),
+    (145_375_000, 12500, "DV Anruf", -55.0),
+    (145_400_000, 12500, "S16", -55.0),
+    (145_450_000, 12500, "S18", -55.0),
+    (145_475_000, 12500, "S19", -55.0),
+    (145_500_000, 12500, "FM Anruf", -55.0),
+    (145_525_000, 12500, "S21", -55.0),
+    (145_550_000, 12500, "S22", -55.0),
+    (145_575_000, 12500, "S23", -55.0),
+    (145_600_000, 12500, "S24", -55.0),
+    # SSB/weak-signal 144.050–144.400
+    (144_050_000, 3000, "CW Anruf", -55.0),
+    (144_100_000, 3000, "CW Meteorscatter", -55.0),
+    (144_174_000, 3000, "FT8", -55.0),
+    (144_300_000, 3000, "SSB Anruf", -55.0),
+    (144_370_000, 3000, "MSK144", -55.0),
+    # Special
+    (145_800_000, 12500, "ISS Downlink", -55.0),
+]
+
+
+async def seed_global_targets(db: AsyncSession) -> int:
+    """Insert default 2m global targets if none exist. Returns count inserted."""
+    existing = await get_global_targets(db)
+    if existing:
+        return 0
+    count = 0
+    for freq_hz, bw_hz, label, threshold in _DEFAULT_GLOBAL_TARGETS:
+        db.add(WatchTarget(
+            instance_id=None,
+            freq_hz=freq_hz,
+            bandwidth_hz=bw_hz,
+            label=label,
+            threshold_db=threshold,
+            enabled=True,
+        ))
+        count += 1
+    await db.commit()
+    logger.info(f"Seeded {count} global targets")
+    return count
 
 
 # --- Detection Events ---

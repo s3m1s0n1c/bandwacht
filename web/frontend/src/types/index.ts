@@ -8,6 +8,7 @@ export interface SdrInstance {
   bandwidth: number | null
   fft_size: number | null
   desired_profile: string | null
+  grid_locator: string | null
   created_at: string
   updated_at: string
 }
@@ -19,7 +20,7 @@ export interface AvailableProfile {
 
 export interface WatchTarget {
   id: number
-  instance_id: number
+  instance_id: number | null
   freq_hz: number
   bandwidth_hz: number
   label: string

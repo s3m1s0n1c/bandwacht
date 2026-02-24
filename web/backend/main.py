@@ -19,12 +19,29 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    # Seed default global targets if none exist
+    await _seed_targets()
     # Auto-start all enabled instances
     await _autostart_instances()
     yield
     # Shutdown: stop all monitors
     from .services.monitor_manager import manager
     await manager.stop_all()
+
+
+async def _seed_targets():
+    """Seed default global targets on first run."""
+    import logging
+    from . import crud
+    from .database import async_session
+
+    try:
+        async with async_session() as db:
+            count = await crud.seed_global_targets(db)
+            if count:
+                logging.getLogger("bandwacht.web").info(f"Seeded {count} global targets")
+    except Exception as e:
+        logging.getLogger("bandwacht.web").error(f"Global target seeding failed: {e}")
 
 
 async def _autostart_instances():

@@ -37,12 +37,19 @@ class DatabaseNotifier(NotificationBackend):
     """Captures detection events into the database and broadcasts to WebSocket clients."""
 
     def __init__(self, instance_id: int, target_map: dict[float, int],
-                 on_event: Optional[Callable] = None):
+                 on_event: Optional[Callable] = None,
+                 instance_name: str = "", instance_grid: str = ""):
         self.instance_id = instance_id
         self.target_map = target_map  # freq_hz -> target db id
         self.on_event = on_event
+        self.instance_name = instance_name
+        self.instance_grid = instance_grid
 
     async def send(self, event: DetectionEvent) -> bool:
+        # Enrich event with instance info before other notifiers see it
+        event.instance_name = self.instance_name
+        event.instance_grid = self.instance_grid
+
         target_id = self.target_map.get(event.freq_hz)
         async with async_session() as db:
             db_event = await crud.create_event(
@@ -68,6 +75,8 @@ class DatabaseNotifier(NotificationBackend):
                     "bandwidth_hz": event.bandwidth_hz,
                     "duration_s": event.duration_s,
                     "target_label": event.target_label,
+                    "instance_name": self.instance_name,
+                    "instance_grid": self.instance_grid,
                 })
         return True
 
@@ -160,7 +169,7 @@ class MonitorManager:
         if not inst:
             raise ValueError(f"Instance {instance_id} not found")
 
-        targets_db = await crud.get_targets(db, instance_id=instance_id)
+        targets_db = await crud.get_targets_for_instance(db, instance_id)
         settings = await crud.get_settings(db)
 
         watch_targets = []
@@ -180,11 +189,13 @@ class MonitorManager:
         # Build notifiers
         notifiers: list[NotificationBackend] = []
 
-        # DB notifier always first
+        # DB notifier always first (enriches events with instance info)
         db_notifier = DatabaseNotifier(
             instance_id=instance_id,
             target_map=target_map,
             on_event=self._broadcast_event,
+            instance_name=inst.name,
+            instance_grid=inst.grid_locator or "",
         )
         notifiers.append(db_notifier)
 
@@ -337,6 +348,8 @@ class MonitorManager:
             bandwidth_hz=12000,
             duration_s=3.5,
             target_label="Test-Signal",
+            instance_name="Test-Instanz",
+            instance_grid="JN66TO",
         )
         return await n.send(test_event)
 

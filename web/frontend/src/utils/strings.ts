@@ -45,6 +45,8 @@ export const UI = {
   cfg_profile: 'Profil',
   cfg_fetch_profiles: 'Profile laden',
   cfg_no_profiles: 'Keine Profile verfügbar',
+  cfg_grid_locator: 'Maidenhead-Locator',
+  cfg_global_target: 'Global (alle Instanzen)',
 
   // History
   hist_title: 'Ereignis-Logbuch',

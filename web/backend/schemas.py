@@ -13,6 +13,7 @@ class InstanceBase(BaseModel):
     url: str
     enabled: bool = True
     desired_profile: str | None = None
+    grid_locator: str | None = None
 
 class InstanceCreate(InstanceBase):
     pass
@@ -22,6 +23,7 @@ class InstanceUpdate(BaseModel):
     url: str | None = None
     enabled: bool | None = None
     desired_profile: str | None = None
+    grid_locator: str | None = None
 
 class InstanceRead(InstanceBase):
     model_config = ConfigDict(from_attributes=True)
@@ -50,7 +52,7 @@ class InstanceStatus(BaseModel):
 # --- Watch Targets ---
 
 class TargetBase(BaseModel):
-    instance_id: int
+    instance_id: int | None = None
     freq_hz: float
     bandwidth_hz: float = 12000.0
     label: str = ""
