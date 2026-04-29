@@ -676,6 +676,7 @@ class BandWacht:
         log_csv: bool = False,
         csv_file: str = "./bandwacht_log.csv",
         desired_profile: Optional[str] = None,
+        list_profiles_only: bool = False,
     ):
         # Normalize URL
         self.base_url = url.rstrip("/")
@@ -708,6 +709,7 @@ class BandWacht:
 
         # Profile switching
         self.desired_profile = desired_profile
+        self.list_profiles_only = list_profiles_only
         self.available_profiles: list[dict] = []
         self._profile_set = False
         self._ws: Optional[object] = None
@@ -750,12 +752,42 @@ class BandWacht:
                     elif msg_type == "profiles" and isinstance(value, list):
                         self.available_profiles = value
                         logger.info(f"Received {len(value)} profiles from server")
+                        if self.list_profiles_only:
+                            self._print_profiles()
+                            self.running = False
+                            return
                     else:
                         # Flat JSON fallback
                         for key, val in data.items():
                             self._handle_config(key, str(val))
             except json.JSONDecodeError:
                 pass
+
+    def _format_profile_line(self, profile: dict) -> str:
+        """Format a profile entry for CLI output."""
+        profile_id = profile.get("id") or profile.get("profile") or profile.get("name") or "<unknown>"
+        name = profile.get("name")
+        center_freq = profile.get("center_freq")
+
+        details = []
+        if name and name != profile_id:
+            details.append(str(name))
+        if center_freq is not None:
+            try:
+                details.append(f"{float(center_freq)/1e6:.4f} MHz")
+            except (TypeError, ValueError):
+                pass
+
+        if details:
+            return f"  {profile_id} | " + " | ".join(details)
+        return f"  {profile_id}"
+
+    def _print_profiles(self):
+        """Print available profile IDs for use with --profile."""
+        logger.info("📋 Available OpenWebRX profiles (use the ID with --profile):")
+        for profile in self.available_profiles:
+            if isinstance(profile, dict):
+                logger.info(self._format_profile_line(profile))
 
     def _handle_config(self, key: str, value: str):
         """Handle a configuration key-value pair."""
@@ -893,6 +925,8 @@ class BandWacht:
                         if isinstance(message, str):
                             # Text message: configuration data
                             self._parse_server_message(message)
+                            if not self.running:
+                                break
 
                             # Initialize analyzer once we have config
                             if (
@@ -1239,6 +1273,8 @@ Supported bands: """ + ", ".join(sorted(BANDS.keys()))
     # Profile switching
     parser.add_argument("--profile", "-p",
                        help="OpenWebRX profile ID to switch to (e.g. rtlsdr|2m, rtlsdr|70cm)")
+    parser.add_argument("--list-profiles", action="store_true",
+                       help="Connect, list available OpenWebRX profile IDs, and exit")
 
     # Logging
     parser.add_argument("--csv", action="store_true", help="Log detections to CSV")
@@ -1335,6 +1371,7 @@ Supported bands: """ + ", ".join(sorted(BANDS.keys()))
         log_csv=args.csv,
         csv_file=args.csv_file,
         desired_profile=args.profile,
+        list_profiles_only=args.list_profiles,
     )
 
     try:
