@@ -130,6 +130,13 @@ class WebBandWacht(BandWacht):
                     event.recording_file = recording_file
                 self._log_csv(event, recording_file)
 
+            # Stop recordings when their target is no longer active.
+            if self.recorder:
+                active_labels = {t.label for t in self.targets if t.active and t.label}
+                for label in list(self.recorder.active_recordings.keys()):
+                    if label not in active_labels:
+                        self.recorder.stop_recording(label)
+
         # Full band scan (same as parent: every ~1s at 9fps)
         if self.scan_full_band and self.fft_count % 10 == 0:
             signals = self.analyzer.scan_full_band(
