@@ -591,6 +591,10 @@ class AudioRecorder:
 
     def start_recording(self, target_label: str, freq_hz: float) -> str:
         """Start a new recording. Returns filename."""
+        # Ensure we flush any stale in-progress recording for this label first.
+        if target_label in self.active_recordings:
+            self.stop_recording(target_label)
+
         freq_mhz = freq_hz / 1e6
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         safe_label = target_label.replace(" ", "_").replace("/", "-") if target_label else "unknown"
@@ -946,6 +950,15 @@ class BandWacht:
                                 self._handle_audio(message[1:])
                             elif msg_type == MSG_TYPE_SMETER:
                                 pass  # Could log S-meter data
+                            elif self.recorder and self.recorder.active_recordings and len(message) > 32:
+                                # Compatibility fallback: some OpenWebRX versions use different
+                                # binary type IDs for audio payloads. If we are actively recording,
+                                # treat unknown sizeable binary payloads as audio data.
+                                logger.debug(
+                                    f"Treating unknown WS binary type 0x{msg_type:02x} as audio "
+                                    f"({len(message)-1} bytes)"
+                                )
+                                self._handle_audio(message[1:])
 
             except websockets.exceptions.ConnectionClosed as e:
                 logger.warning(f"🔌 Connection closed: {e}")
@@ -1021,6 +1034,13 @@ class BandWacht:
                     event.recording_file = recording_file
 
                 self._log_csv(event, recording_file)
+
+            # Stop recordings when their target is no longer active.
+            if self.recorder:
+                active_labels = {t.label for t in self.targets if t.active and t.label}
+                for label in list(self.recorder.active_recordings.keys()):
+                    if label not in active_labels:
+                        self.recorder.stop_recording(label)
 
         # Full band scan
         if self.scan_full_band and self.fft_count % 10 == 0:  # every ~1s at 9fps
