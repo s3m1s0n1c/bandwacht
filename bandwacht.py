@@ -950,6 +950,15 @@ class BandWacht:
                                 self._handle_audio(message[1:])
                             elif msg_type == MSG_TYPE_SMETER:
                                 pass  # Could log S-meter data
+                            elif self.recorder and self.recorder.active_recordings and len(message) > 32:
+                                # Compatibility fallback: some OpenWebRX versions use different
+                                # binary type IDs for audio payloads. If we are actively recording,
+                                # treat unknown sizeable binary payloads as audio data.
+                                logger.debug(
+                                    f"Treating unknown WS binary type 0x{msg_type:02x} as audio "
+                                    f"({len(message)-1} bytes)"
+                                )
+                                self._handle_audio(message[1:])
 
             except websockets.exceptions.ConnectionClosed as e:
                 logger.warning(f"🔌 Connection closed: {e}")
